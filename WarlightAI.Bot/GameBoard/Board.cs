@@ -1,5 +1,4 @@
-﻿using WarlightAI.Model;
-// <copyright file="MapFactory.cs">
+﻿// <copyright file="MapFactory.cs">
 //        Copyright (c) 2013 All Rights Reserved
 // </copyright>
 // <author>Brecht Houben</author>
@@ -8,6 +7,8 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+
+using WarlightAI.Model;
 
 namespace WarlightAI.GameBoard
 {
@@ -118,7 +119,7 @@ namespace WarlightAI.GameBoard
                 .Neighbours.AddRange(neighborregions);
 
             /* 
-             * Neighbors are only given once.
+             * Neighbors are only given in one direction.
              * E.g.: A has neighbour B, but the game won't tell us B has neighbour A.
              * 
              * We have to define that relation explicitly
@@ -170,8 +171,9 @@ namespace WarlightAI.GameBoard
         public SuperRegion GetSuperRegionForRegion(Region region)
         {
             return SuperRegions
-                .Where(superregion => superregion.ChildRegions.Contains(region))
-                .FirstOrDefault();
+                .FirstOrDefault(
+                    superregion => superregion.ChildRegions.Contains(region)
+                );
         }
 
         /// <summary>
@@ -181,8 +183,7 @@ namespace WarlightAI.GameBoard
         public void MarkStartingRegions(String[] regions)
         {
             // Reset all regions statuses
-            Regions
-                .ForEach(r => r.RegionStatus = RegionStatus.Initialized);
+            Regions.ForEach(r => r.RegionStatus = RegionStatus.Initialized);
 
             regions
                 .ToList()
@@ -201,7 +202,7 @@ namespace WarlightAI.GameBoard
         /// Picks the favorite starting region.
         /// </summary>
         /// <returns></returns>
-        public IEnumerable<Region> PickFavoriteStartingRegion()
+        public Region PickFavoriteStartingRegion()
         {
             /*
              * One key to victory is control over continents.
@@ -217,7 +218,7 @@ namespace WarlightAI.GameBoard
             return Regions
                 .Where(region => region.RegionStatus == RegionStatus.PossibleStartingRegion)
                 .OrderByDescending(region => GetSuperRegionForRegion(region).Priority)
-                .Take(1);
+                .FirstOrDefault();
         }
 
         /// <summary>
@@ -226,7 +227,6 @@ namespace WarlightAI.GameBoard
         public void ClearRegions()
         {
             Regions
-                .ToList()
                 .ForEach(
                     (region) =>
                     {

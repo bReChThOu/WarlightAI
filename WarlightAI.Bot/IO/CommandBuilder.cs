@@ -17,9 +17,9 @@ namespace WarlightAI.IO
         /// Outputs the starting region.
         /// </summary>
         /// <param name="regions">The regions.</param>
-        public static void OutputStartingRegion(IEnumerable<Region> regions)
+        public static void OutputStartingRegion(Region region)
         {
-            Output(String.Join(" ", regions.Select(region => region.ID.ToString()).ToArray())); //.ToString() needed for mono compliance
+            Output(region.ID.ToString()); //.ToString() needed for mono compliance
         }
 
         /// <summary>
