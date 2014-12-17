@@ -4,7 +4,6 @@
 // <author>Brecht Houben</author>
 // <date>10/03/2014</date>
 using System;
-using System.IO;
 using System.Text.RegularExpressions;
 
 namespace WarlightAI.IO

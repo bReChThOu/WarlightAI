@@ -1,11 +1,12 @@
-﻿using WarlightAI.GameBoard;
-// <copyright file="CommandParser.cs">
+﻿// <copyright file="CommandParser.cs">
 //        Copyright (c) 2013 All Rights Reserved
 // </copyright>
 // <author>Brecht Houben</author>
 // <date>10/03/2014</date>
 using System;
 using System.Linq;
+
+using WarlightAI.GameBoard;
 
 namespace WarlightAI.IO
 {

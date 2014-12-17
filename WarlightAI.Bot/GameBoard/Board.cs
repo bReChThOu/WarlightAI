@@ -82,8 +82,7 @@ namespace WarlightAI.GameBoard
             Regions.Add(region);
 
             SuperRegions
-                .Where(sr => sr.ID == superRegionId)
-                .FirstOrDefault()
+                .FirstOrDefault(sr => sr.ID == superRegionId)
                 .AddChildRegion(region);
         }
 
@@ -114,9 +113,9 @@ namespace WarlightAI.GameBoard
                     .ToList();
 
             Regions
-                .Where(region => region.ID == id)
-                .FirstOrDefault()
-                .Neighbours.AddRange(neighborregions);
+                .FirstOrDefault(region => region.ID == id)
+                .Neighbours
+                .AddRange(neighborregions);
 
             /* 
              * Neighbors are only given in one direction.
@@ -127,7 +126,11 @@ namespace WarlightAI.GameBoard
             neighborregions.ForEach(
                 (neighbor) =>
                 {
-                    neighbor.Neighbours.Add(Regions.Where(region => region.ID == id).FirstOrDefault());
+                    neighbor
+                        .Neighbours
+                        .Add(
+                            Regions
+                            .FirstOrDefault(region => region.ID == id));
                 }
             );
         }
@@ -191,8 +194,7 @@ namespace WarlightAI.GameBoard
                     (r) =>
                     {
                         Regions
-                            .Where(region => region.ID == Int32.Parse(r))
-                            .FirstOrDefault()
+                            .FirstOrDefault(region => region.ID == Int32.Parse(r))
                             .RegionStatus = RegionStatus.PossibleStartingRegion;
                     }
                 );
@@ -245,8 +247,7 @@ namespace WarlightAI.GameBoard
         public void UpdateRegion(int regionid, String playername, int nbrOfArmies)
         {
             Regions
-                .Where(region => region.ID == regionid)
-                .FirstOrDefault()
+                .FirstOrDefault(region => region.ID == regionid)
                 .Update(Configuration.Current.GetPlayerByName(playername) , nbrOfArmies);
         }
 
@@ -301,8 +302,6 @@ namespace WarlightAI.GameBoard
                 }
             }
 
-
-
             var primaryRegion = Regions
                    .Where(region => region.NbrOfArmies < 100)
                    .Where(region => region.Player != null && region.Player.PlayerType == PlayerType.Me)
@@ -325,12 +324,15 @@ namespace WarlightAI.GameBoard
                    .ThenBy(region => (GetSuperRegionForRegion(region).ChildRegions.Count(child => child.Player.PlayerType == PlayerType.Me)))
                    .ThenByDescending(region => region.NbrOfArmies)
                    .FirstOrDefault();
+
                 var armyplacement = new ArmyPlacement() { Armies = 4, Region = primaryRegion };
                 placements.Add(armyplacement);
+
                 if (secundaryRegion == null)
                 {
                     secundaryRegion = primaryRegion;
                 }
+
                 armyplacement = new ArmyPlacement() { Armies = startingArmies - 4, Region = secundaryRegion };
                 placements.Add(armyplacement);
             }
@@ -346,12 +348,15 @@ namespace WarlightAI.GameBoard
                    .ThenBy(region => (GetSuperRegionForRegion(region).ChildRegions.Count(child => child.Player.PlayerType == PlayerType.Me)))
                    .ThenByDescending(region => region.NbrOfArmies)
                    .FirstOrDefault();
+
                 var armyplacement = new ArmyPlacement() { Armies = 5, Region = primaryRegion };
                 placements.Add(armyplacement);
+
                 if (secundaryRegion == null)
                 {
                     secundaryRegion = primaryRegion;
                 }
+
                 armyplacement = new ArmyPlacement() { Armies = startingArmies - 5, Region = secundaryRegion };
                 placements.Add(armyplacement);
             }
@@ -370,10 +375,12 @@ namespace WarlightAI.GameBoard
 
                 var armyplacement = new ArmyPlacement() { Armies = 9, Region = primaryRegion };
                 placements.Add(armyplacement);
+
                 if (secundaryRegion == null)
                 {
                     secundaryRegion = primaryRegion;
                 }
+
                 armyplacement = new ArmyPlacement() { Armies = startingArmies - 9, Region = secundaryRegion };
                 placements.Add(armyplacement);
             }
@@ -392,10 +399,12 @@ namespace WarlightAI.GameBoard
 
                 var armyplacement = new ArmyPlacement() { Armies = startingArmies - 9, Region = primaryRegion };
                 placements.Add(armyplacement);
+
                 if (secundaryRegion == null)
                 {
                     secundaryRegion = primaryRegion;
                 }
+
                 armyplacement = new ArmyPlacement() { Armies = 9, Region = secundaryRegion };
                 placements.Add(armyplacement);
             }

@@ -3,6 +3,7 @@
 // </copyright>
 // <author>Brecht Houben</author>
 // <date>10/03/2014</date>
+
 namespace WarlightAI.GameBoard
 {
     public class GameSettings

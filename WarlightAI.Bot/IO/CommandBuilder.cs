@@ -1,6 +1,4 @@
-﻿using WarlightAI.GameBoard;
-using WarlightAI.Model;
-// <copyright file="CommandBuilder.cs">
+﻿// <copyright file="CommandBuilder.cs">
 //        Copyright (c) 2013 All Rights Reserved
 // </copyright>
 // <author>Brecht Houben</author>
@@ -8,6 +6,9 @@ using WarlightAI.Model;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+
+using WarlightAI.GameBoard;
+using WarlightAI.Model;
 
 namespace WarlightAI.IO
 {

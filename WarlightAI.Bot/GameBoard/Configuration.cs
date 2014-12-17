@@ -1,5 +1,4 @@
-﻿using WarlightAI.Model;
-// <copyright file="ConfigFactory.cs">
+﻿// <copyright file="ConfigFactory.cs">
 //        Copyright (c) 2013 All Rights Reserved
 // </copyright>
 // <author>Brecht Houben</author>
@@ -8,6 +7,8 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+
+using WarlightAI.Model;
 
 namespace WarlightAI.GameBoard
 {
