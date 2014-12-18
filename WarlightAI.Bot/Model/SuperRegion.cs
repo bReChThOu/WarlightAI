@@ -1,5 +1,5 @@
 ﻿// <copyright file="SuperRegion.cs">
-//        Copyright (c) 2013 All Rights Reserved
+//        Copyright (c) 2014 All Rights Reserved
 // </copyright>
 // <author>Brecht Houben</author>
 // <date>10/03/2014</date>
@@ -51,7 +51,7 @@ namespace WarlightAI.Model
         /// <value>
         /// The child regions.
         /// </value>
-        public List<Region> ChildRegions { get; internal set;}
+        public Regions ChildRegions { get; internal set;}
 
         /// <summary>
         /// Gets the priority.
@@ -66,7 +66,7 @@ namespace WarlightAI.Model
         /// </summary>
         public SuperRegion()
         {
-            ChildRegions = new List<Region>();
+            ChildRegions = new Regions();
         }
 
         /// <summary>
@@ -76,7 +76,7 @@ namespace WarlightAI.Model
         public void AddChildRegion(Region region)
         {
             ChildRegions.Add(region);
-            Priority = (int) 1000 / ChildRegions.Count;
+            Priority = 1000 / ChildRegions.Count;
         }
 
         public override string ToString()

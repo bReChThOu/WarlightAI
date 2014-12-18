@@ -7,8 +7,8 @@
     <ProjectGuid>{06C6CA09-6180-48AD-860D-95E02550248B}</ProjectGuid>
     <OutputType>Exe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Warlight</RootNamespace>
-    <AssemblyName>Warlight</AssemblyName>
+    <RootNamespace>WarlightAI</RootNamespace>
+    <AssemblyName>WarlightAI</AssemblyName>
     <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <TargetFrameworkProfile />
@@ -53,8 +53,10 @@
     <Compile Include="Model\ArmyTransfer.cs" />
     <Compile Include="GameBoard\Board.cs" />
     <Compile Include="Model\Region.cs" />
+    <Compile Include="Model\Regions.cs" />
     <Compile Include="Model\RegionStatus.cs" />
     <Compile Include="Model\SuperRegion.cs" />
+    <Compile Include="Model\SuperRegions.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

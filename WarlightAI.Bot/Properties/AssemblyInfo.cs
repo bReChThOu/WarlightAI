@@ -8,7 +8,7 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyTitle("Warlight AI Challenge")]
 [assembly: AssemblyDescription("Warlight AI Challenge Bot")]
 [assembly: AssemblyConfiguration("")]
-[assembly: AssemblyCompany("Microsoft")]
+[assembly: AssemblyCompany("")]
 [assembly: AssemblyProduct("Warlight AI Challenge")]
 [assembly: AssemblyCopyright("Copyright © Brecht Houben 2014")]
 [assembly: AssemblyTrademark("")]

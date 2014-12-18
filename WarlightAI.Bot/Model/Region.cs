@@ -1,10 +1,9 @@
 ﻿// <copyright file="Region.cs">
-//        Copyright (c) 2013 All Rights Reserved
+//        Copyright (c) 2014 All Rights Reserved
 // </copyright>
 // <author>Brecht Houben</author>
 // <date>10/03/2014</date>
 using System;
-using System.Collections.Generic;
 
 namespace WarlightAI.Model
 {
@@ -53,7 +52,7 @@ namespace WarlightAI.Model
         /// <value>
         /// The neighbours.
         /// </value>
-        public List<Region> Neighbours { get; set; }
+        public Regions Neighbours { get; set; }
 
 
         /// <summary>
@@ -69,7 +68,7 @@ namespace WarlightAI.Model
         /// </summary>
         public Region()
         {
-            Neighbours = new List<Region>();
+            Neighbours = new Regions();
             RegionStatus = RegionStatus.Initialized;
         }
 
@@ -85,6 +84,16 @@ namespace WarlightAI.Model
         }
 
         /// <summary>
+        /// Determines whether this region [is occupied by] [the specified player type].
+        /// </summary>
+        /// <param name="playerType">The player type.</param>
+        /// <returns></returns>
+        public bool IsOccupiedBy (PlayerType playerType)
+        {
+            return Player != null && Player.PlayerType == playerType;
+        }
+
+        /// <summary>
         /// Returns a <see cref="System.String" /> that represents this instance.
         /// </summary>
         /// <returns>
@@ -92,7 +101,7 @@ namespace WarlightAI.Model
         /// </returns>
         public override string ToString()
         {
-            return String.Format("{0} - {1}", ID, Player.ToString());
+            return String.Format("{0} - {1}", ID, Player);
         }
 
     }

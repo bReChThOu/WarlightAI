@@ -1,5 +1,5 @@
 ﻿// <copyright file="Bot.cs">
-//        Copyright (c) 2013 All Rights Reserved
+//        Copyright (c) 2014 All Rights Reserved
 // </copyright>
 // <author>Brecht Houben</author>
 // <date>10/03/2014</date>
