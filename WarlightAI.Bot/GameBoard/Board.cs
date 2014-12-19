@@ -53,6 +53,14 @@ namespace WarlightAI.GameBoard
         private Regions Regions { get; set; }
 
         /// <summary>
+        /// Gets or sets the transfers.
+        /// </summary>
+        /// <value>
+        /// The transfers.
+        /// </value>
+        private List<ArmyTransfer> Transfers { get; set; } 
+
+        /// <summary>
         /// Prevents a default instance of the <see cref="Board"/> class from being created.
         /// </summary>
         private Board()
@@ -81,9 +89,10 @@ namespace WarlightAI.GameBoard
             var region = new Region { ID = id };
             Regions.Add(region);
 
-            SuperRegions
-                .Get(superRegionId)
-                .AddChildRegion(region);
+            var superRegion = SuperRegions.Get(superRegionId);
+
+            superRegion.AddChildRegion(region);
+            region.SuperRegion = superRegion;
         }
 
         /// <summary>
@@ -424,6 +433,10 @@ namespace WarlightAI.GameBoard
             return placements;
         }
 
+        /// <summary>
+        /// Transfers the armies.
+        /// </summary>
+        /// <returns></returns>
         public IEnumerable<ArmyTransfer> TransferArmies()
         {
             /*
@@ -432,532 +445,503 @@ namespace WarlightAI.GameBoard
              * 
              * If there are enemy armies sighted: let's move some troops to defend those invasion paths
              * */
-            var transfers = new List<ArmyTransfer>();
-            
-            SuperRegions.ForEach(
-                (superregion) =>
-                {
-                    //Do i have any regions in this super region?
-                    bool skipSuperRegion = !superregion
-                        .ChildRegions
-                        .Any(region => region.IsOccupiedBy(PlayerType.Me));
+            Transfers = new List<ArmyTransfer>();
 
-                    if (!skipSuperRegion)
-                    {
-                        int borderTerritoriesWithEnemyArmies = superregion.BorderTerritories
-                            .Where(bt => bt.Neighbours.Any(btn => btn.IsOccupiedBy(PlayerType.Opponent)))
-                            .Where(bt => (bt.IsOccupiedBy(PlayerType.Me)) || bt.Neighbours.Any(btn => btn.IsOccupiedBy(PlayerType.Me) && SuperRegions.Get(btn) == superregion))
-                            .Count();
-
-                        int regionsWithEnemyArmies = superregion.ChildRegions
-                            .Where(region => region.IsOccupiedBy(PlayerType.Opponent))
-                            .Where(region => region.Neighbours.Any(neighbour => neighbour.IsOccupiedBy(PlayerType.Me)))
-                            .Count();
-
-                        bool transferDone = false;
-
-                        /*
-                         * There is nobody in our way, let's conquer the continent, or even explore a new continent.
-                         * */
-                        if (borderTerritoriesWithEnemyArmies == 0 && regionsWithEnemyArmies == 0)
-                        {
-                            Region targetRegion = null, sourceRegion = null;
-
-                            var targetRegions = superregion
-                                .ChildRegions
-                                .Where(region => region.IsOccupiedBy(PlayerType.Neutral))
-                                .OrderBy(region => region.Neighbours.Count(neighbor => SuperRegions.Get(neighbor) != SuperRegions.Get(region)) > 0 ? 1 : 0)
-                                .ThenByDescending(region => region.Neighbours.Count(neighbor => neighbor.IsOccupiedBy(PlayerType.Neutral) && SuperRegions.Get(neighbor) == SuperRegions.Get(region)) > 0 ? 1 : 0)
-                                .ThenByDescending(region =>
-                                    region.Neighbours.Where(neighbour => neighbour.IsOccupiedBy(PlayerType.Me)).Select(reg => reg.NbrOfArmies).Sum()
-                                );
-
-                            targetRegion = targetRegions.FirstOrDefault();
-
-                            /* No neutral armies found, that should mean we own the continent.
-                             * Let's explore the world and go to a new super region
-                             * */
-                            if (targetRegion == null)
-                            {
-                                targetRegions = superregion
-                                   .InvasionPaths
-                                   .Where(region => region.IsOccupiedBy(PlayerType.Neutral))
-                                   .OrderByDescending(region =>
-                                       region.Neighbours.Where(neighbour => neighbour.IsOccupiedBy(PlayerType.Me)).Select(reg => reg.NbrOfArmies).Sum()
-
-                                   );
-                                targetRegion = targetRegions.FirstOrDefault();
-
-                                if (targetRegion != null)
-                                {
-                                    //When we seem to be alone on this superregion, we'll want to make more than 1 move
-                                    foreach (var cTargetRegion in targetRegions)
-                                    {
-                                        sourceRegion = cTargetRegion
-                                        .Neighbours
-                                        .Where(region => region.IsOccupiedBy(PlayerType.Me) && region.NbrOfArmies > 5)
-                                        .Where(region => transfers.Count(t => t.SourceRegion.ID == region.ID) == 0)
-                                        .OrderByDescending(region => region.NbrOfArmies)
-                                        .FirstOrDefault();
-
-                                        transferDone = AddCurrentPairToTransferList(sourceRegion, cTargetRegion, transfers);
-                                    }
-                                }
-                                else
-                                {
-                                    targetRegion = superregion
-                                    .InvasionPaths
-                                    .Where(region => region.IsOccupiedBy(PlayerType.Opponent))
-                                    .OrderByDescending(region =>
-                                            region.Neighbours
-                                                .Where(neighbour => neighbour.IsOccupiedBy(PlayerType.Me))
-                                                .Where(neighbor => neighbor.NbrOfArmies > 5)
-                                                .Where(neighbor => neighbor.NbrOfArmies > region.NbrOfArmies * 2)
-                                                .Select(reg => reg.NbrOfArmies).Sum()
-                                    )
-                                    .FirstOrDefault();
-
-                                    if (targetRegion != null)
-                                    {
-                                        sourceRegion = targetRegion
-                                        .Neighbours
-                                        .Where(region => region.IsOccupiedBy(PlayerType.Me) && region.NbrOfArmies > 5)
-                                        .OrderByDescending(region => region.NbrOfArmies)
-                                        .FirstOrDefault();
-
-                                        transferDone = AddCurrentPairToTransferList(sourceRegion, targetRegion, transfers);
-                                    }
-                                }
-                            }
-
-
-                            else
-                            {
-                                //When we seem to be alone on this superregion, we'll want to make more than 1 move
-                                for(int i = 0; i < targetRegions.Count(); i++) 
-                                {
-                                    var cTargetRegion = targetRegions.ToArray()[i];
-                                    sourceRegion = cTargetRegion
-                                    .Neighbours
-                                    .Where(region => SuperRegions.Get(region) == superregion)
-                                    .Where(region => region.IsOccupiedBy(PlayerType.Me) && region.NbrOfArmies > 5)
-                                    .Where(region => transfers.Count(t => t.SourceRegion.ID == region.ID) == 0)
-                                    .OrderByDescending(region => region.NbrOfArmies)
-                                    .FirstOrDefault();
-
-                                    if (sourceRegion != null)
-                                    {
-
-                                        //We can conquer multiple neutral regions with one army.
-                                        if (sourceRegion.NbrOfArmies > 10)
-                                        {
-                                            i--;
-                                            for (int n = sourceRegion.NbrOfArmies; n > 5 && i < targetRegions.Count() - 1; )
-                                            {
-                                                cTargetRegion = targetRegions.ToArray()[++i];
-                                                int nbrOfArmies = 5;
-                                                if (n < 10)
-                                                {
-                                                    nbrOfArmies = n - 1;
-                                                }
-                                                transferDone = AddCurrentPairToTransferList(sourceRegion, cTargetRegion, transfers, nbrOfArmies);
-                                                n = n - nbrOfArmies;
-                                            }
-                                        }
-                                        else
-                                        {
-                                            if (targetRegion.NbrOfArmies <= sourceRegion.NbrOfArmies)
-                                            {
-                                                transferDone = AddCurrentPairToTransferList(sourceRegion, cTargetRegion, transfers);
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                            /*
-                             * Its not good to leave 3 armies on 1 region and 4 armies on another region.
-                             * We have to move armies to the largest region to conquer the super region faster.
-                             * For now, only do this when there are no enemies spotted
-                             * */
-                            var largestRegion = superregion
-                                .ChildRegions
-                                .Find(PlayerType.Me)
-                                .Where(region => region.NbrOfArmies > 1)
-                                .Where(region => !region.Neighbours.All(n => n.IsOccupiedBy(PlayerType.Me)))
-                                .OrderByDescending(region => region.NbrOfArmies)
-                                .FirstOrDefault();
-
-                            if (largestRegion != null)
-                            {
-                                var qualifiedArmies = superregion
-                                    .ChildRegions
-                                    .Find(PlayerType.Me)
-                                    .Where(region => region.NbrOfArmies > 1)
-                                    .Where(region => largestRegion.Neighbours.Contains(region))
-                                    .Where(region => transfers.None(t => t.SourceRegion.ID == region.ID));
-                                if (qualifiedArmies.Any())
-                                {
-                                    foreach (var qualifiedArmy in qualifiedArmies)
-                                    {
-                                        transferDone = AddCurrentPairToTransferList(qualifiedArmy, largestRegion, transfers);
-                                    }
-                                }
-                            }
-
-                        }
-
-                        /*
-                         * There is an enemy army nearby. Let's not let them take this continent.
-                         * */
-
-                        if (borderTerritoriesWithEnemyArmies > 0 && !transferDone)
-                        {
-                            Region targetRegion = null, sourceRegion = null;
-
-                            var invadingBorderTerritory = superregion
-                                .InvasionPaths
-                                .Where(invasionpath => invasionpath.IsOccupiedBy(PlayerType.Opponent))
-                                .OrderByDescending(region => region.NbrOfArmies)
-                                .FirstOrDefault();
-                            /*
-                             * We can't attack the biggest enemy region. Let's try another
-                             * Every conquered region means the opponent might loose his super region bonus!
-                             * */
-                            if (invadingBorderTerritory == null)
-                            {
-                                invadingBorderTerritory = superregion
-                                .InvasionPaths
-                                .Where(invasionpath => invasionpath.IsOccupiedBy(PlayerType.Opponent))
-                                .OrderBy(region => region.NbrOfArmies)
-                                .FirstOrDefault();
-                            }
-
-                            if (invadingBorderTerritory != null)
-                            {
-
-                                int enemyArmies = invadingBorderTerritory.NbrOfArmies;
-
-                                /* Let's see if we can attack. There is  60% change per attacking army. 
-                                 * We will be extra safe and use a 50% chance.
-                                 * This means we'll need at least double as much armies as our opponent.
-                                 * If this isn't the case, we'll send more armies to this region and defend our grounds.
-                                 * 
-                                 * */
-
-                                var possibleAttackingRegion = superregion
-                                    .ChildRegions
-                                    .Find(PlayerType.Me)
-                                    .Where(region => region.Neighbours.Contains(invadingBorderTerritory))
-                                    .Where(region => (region.NbrOfArmies >= enemyArmies * 2 || region.NbrOfArmies > Configuration.Current.GetMaximumTreshold()) && region.NbrOfArmies > 5)
-                                    .OrderByDescending(region => region.NbrOfArmies)
-                                    .FirstOrDefault();
-
-                                //We can attack!
-                                if (possibleAttackingRegion != null)
-                                {
-                                    targetRegion = invadingBorderTerritory;
-                                    sourceRegion = possibleAttackingRegion;
-                                }
-
-                                /* We can't attack, so let's defend.
-                                 * We'll send armies to the region that can be attacked with the least number of armies
-                                 * We'll prefer sending from regions that can't be attacked.
-                                 **/
-                                else
-                                {
-                                    targetRegion = invadingBorderTerritory
-                                        .Neighbours
-                                        .Find(PlayerType.Me)
-                                        .Where(region => SuperRegions.Get(region) == superregion)
-                                        .OrderBy(region => region.NbrOfArmies)
-                                        .FirstOrDefault();
-
-                                    if (targetRegion != null)
-                                    {
-
-                                        sourceRegion = targetRegion
-                                            .Neighbours
-                                            .Find(PlayerType.Me)
-                                            .OrderByDescending(region => region.NbrOfArmies)
-                                            .FirstOrDefault();
-                                    }
-                                }
-
-                                transferDone = AddCurrentPairToTransferList(sourceRegion, targetRegion, transfers);
-
-                                var targetRegions = superregion
-                                    .ChildRegions
-                                    .Where(region => region.IsOccupiedBy(PlayerType.Neutral))
-                                    .OrderBy(region => region.Neighbours.Count(neighbor => SuperRegions.Get(neighbor) != SuperRegions.Get(region)) > 0 ? 1 : 0)
-                                    .ThenByDescending(region => region.Neighbours.Count(neighbor => neighbor.IsOccupiedBy(PlayerType.Neutral) && SuperRegions.Get(neighbor) == SuperRegions.Get(region)) > 0 ? 1 : 0)
-                                    .ThenByDescending(region =>
-                                        region.Neighbours.Where(neighbour => neighbour.IsOccupiedBy(PlayerType.Me)).Select(reg => reg.NbrOfArmies).Sum()
-                                    );
-
-                                //When we seem to be alone on this superregion, we'll want to make more than 1 move
-                                foreach (var cTargetRegion in targetRegions)
-                                {
-                                    sourceRegion = cTargetRegion
-                                    .Neighbours
-                                    .Where(region => SuperRegions.Get(region) == superregion)
-                                    .Where(region => region.IsOccupiedBy(PlayerType.Me) && region.NbrOfArmies > 5)
-                                    .Where(region => transfers.Count(t => t.SourceRegion.ID == region.ID) == 0)
-                                    .OrderByDescending(region => region.NbrOfArmies)
-                                    .FirstOrDefault();
-
-                                    transferDone = AddCurrentPairToTransferList(sourceRegion, cTargetRegion, transfers);
-                                }
-                            }
-                        }
-
-
-                        /*
-                         * There is an enemy army in this super region. Let's not let them take the whole continent.
-                         * */
-                        if (regionsWithEnemyArmies > 0 && !transferDone)
-                        {
-                            Region targetRegion = null, sourceRegion = null;
-
-                            var hostileRegion = superregion
-                                .ChildRegions
-                                .Where(region => region.IsOccupiedBy(PlayerType.Opponent))
-                                .Where(region => region.Neighbours.Any(n => n.IsOccupiedBy(PlayerType.Me) && n.NbrOfArmies > 5 && (n.NbrOfArmies >= region.NbrOfArmies * 2 || n.NbrOfArmies > Configuration.Current.GetMaximumTreshold())))
-                                .OrderBy(region => region.NbrOfArmies)
-                                .FirstOrDefault();
-
-                            if (hostileRegion != null)
-                            {
-                                int enemyArmies = hostileRegion.NbrOfArmies;
-
-                                /* Let's see if we can attack. There is  60% change per attacking army. 
-                                 * We will be extra safe and use a 50% chance.
-                                 * This means we'll need at least double as much armies as our opponent.
-                                 * If this isn't the case, we'll send more armies to this region and defend our grounds.
-                                 * 
-                                 * */
-
-                                var possibleAttackingRegion = superregion
-                                    .ChildRegions
-                                    .Find(PlayerType.Me)
-                                    .Where(region => region.Neighbours.Contains(hostileRegion))
-                                    .Where(
-                                        region =>
-                                            (region.NbrOfArmies >= enemyArmies*2 ||
-                                             region.NbrOfArmies > Configuration.Current.GetMaximumTreshold()) &&
-                                            region.NbrOfArmies > 5)
-                                    .OrderByDescending(region => region.NbrOfArmies)
-                                    .FirstOrDefault();
-
-                                //We can attack!
-                                if (possibleAttackingRegion != null)
-                                {
-                                    targetRegion = hostileRegion;
-                                    sourceRegion = possibleAttackingRegion;
-                                }
-
-                                    /* We can't attack, so let's defend.
-                                 * We'll send armies to the region that can be attacked with the least number of armies
-                                 * We'll prefer sending from regions that can't be attacked.
-                                 **/
-                                else
-                                {
-                                    targetRegion = hostileRegion
-                                        .Neighbours
-                                        .Find(PlayerType.Me)
-                                        .Where(region => SuperRegions.Get(region) == superregion)
-                                        .OrderBy(region => region.NbrOfArmies)
-                                        .FirstOrDefault();
-
-                                    if (targetRegion != null)
-                                    {
-
-                                        sourceRegion = targetRegion
-                                            .Neighbours
-                                            .Find(PlayerType.Me)
-                                            .OrderByDescending(region => region.NbrOfArmies)
-                                            .FirstOrDefault();
-                                    }
-                                    else
-                                    {
-                                        //We can't defend a region, probably because we don't have armies nearby, so let's conquer some regions instead
-                                        var targetRegions = superregion
-                                            .ChildRegions
-                                            .Where(region => region.IsOccupiedBy(PlayerType.Neutral))
-                                            .OrderBy(
-                                                region =>
-                                                    region.Neighbours.Count(
-                                                        neighbor =>
-                                                            SuperRegions.Get(neighbor) != SuperRegions.Get(region)) > 0
-                                                        ? 1
-                                                        : 0)
-                                            .ThenByDescending(
-                                                region =>
-                                                    region.Neighbours.Count(
-                                                        neighbor =>
-                                                            neighbor.IsOccupiedBy(PlayerType.Neutral) &&
-                                                            SuperRegions.Get(neighbor) == SuperRegions.Get(region)) > 0
-                                                        ? 1
-                                                        : 0)
-                                            .ThenByDescending(region =>
-                                                region.Neighbours.Where(
-                                                    neighbour => neighbour.IsOccupiedBy(PlayerType.Me))
-                                                    .Select(reg => reg.NbrOfArmies)
-                                                    .Sum()
-                                            );
-
-                                        foreach (var cTargetRegion in targetRegions)
-                                        {
-                                            sourceRegion = cTargetRegion
-                                                .Neighbours
-                                                .Where(region => SuperRegions.Get(region) == superregion)
-                                                .Where(
-                                                    region =>
-                                                        region.IsOccupiedBy(PlayerType.Me) && region.NbrOfArmies > 5)
-                                                .Where(
-                                                    region => transfers.Count(t => t.SourceRegion.ID == region.ID) == 0)
-                                                .OrderByDescending(region => region.NbrOfArmies)
-                                                .FirstOrDefault();
-
-                                            if (sourceRegion != null)
-                                            {
-                                                transferDone = AddCurrentPairToTransferList(sourceRegion, cTargetRegion,
-                                                    transfers);
-                                            }
-                                        }
-                                    }
-                                }
-
-                                if (!transferDone)
-                                {
-                                    transferDone = AddCurrentPairToTransferList(sourceRegion, targetRegion, transfers);
-                                }
-                            }
-
-                            /*
-                             * There is a hostile region in this super regio but we can not attack it 
-                             * Maybe we dont have enough armies nearby
-                             * So lets try doing something else, like conquering neutral armies
-                             */
-                            else
-                            {
-                                var targetRegions = superregion
-                                .ChildRegions
-                                .Where(region => region.IsOccupiedBy(PlayerType.Neutral))
-                                .OrderBy(region => region.Neighbours.Count(neighbor => SuperRegions.Get(neighbor) != SuperRegions.Get(region)) > 0 ? 1 : 0)
-                                .ThenByDescending(region => region.Neighbours.Count(neighbor => neighbor.IsOccupiedBy(PlayerType.Neutral) && SuperRegions.Get(neighbor) == SuperRegions.Get(region)) > 0 ? 1 : 0)
-                                .ThenByDescending(region =>
-                                    region.Neighbours.Where(neighbour => neighbour.IsOccupiedBy(PlayerType.Me)).Select(reg => reg.NbrOfArmies).Sum()
-                                );
-
-                                for (int i = 0; i < targetRegions.Count(); i++)
-                                {
-                                    var cTargetRegion = targetRegions.ToArray()[i];
-                                    sourceRegion = cTargetRegion
-                                    .Neighbours
-                                    .Where(region => SuperRegions.Get(region) == superregion)
-                                    .Where(region => region.IsOccupiedBy(PlayerType.Me) && region.NbrOfArmies > 5)
-                                    .Where(region => transfers.Count(t => t.SourceRegion.ID == region.ID) == 0)
-                                    .OrderByDescending(region => region.NbrOfArmies)
-                                    .FirstOrDefault();
-
-                                    if (sourceRegion != null)
-                                    {
-
-                                        //We can conquer multiple neutral regions with one army.
-                                        if (sourceRegion.NbrOfArmies > 10)
-                                        {
-                                            i--;
-                                            for (int n = sourceRegion.NbrOfArmies; n > 5 && i < targetRegions.Count() - 1; )
-                                            {
-                                                cTargetRegion = targetRegions.ToArray()[++i];
-                                                int nbrOfArmies = 5;
-                                                if (n < 10)
-                                                {
-                                                    nbrOfArmies = n - 1;
-                                                }
-                                                transferDone = AddCurrentPairToTransferList(sourceRegion, cTargetRegion, transfers, nbrOfArmies);
-                                                n = n - nbrOfArmies;
-                                            }
-                                        }
-                                        else
-                                        {
-                                            if (targetRegion.NbrOfArmies <= sourceRegion.NbrOfArmies)
-                                            {
-                                                transferDone = AddCurrentPairToTransferList(sourceRegion, cTargetRegion, transfers);
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        /*
-                         * Let's see if we can move some troops away from the inland where they can't do anything
-                         * besides being stuck
-                         * */
-                        var stuckArmies = superregion
-                                            .ChildRegions
-                                            .Find(PlayerType.Me)
-                                            .Where(region => transfers.Count(t => t.SourceRegion.ID == region.ID) == 0)
-                                            .Where(region => transfers.Count(t => t.TargetRegion.ID == region.ID) == 0)
-                                            .Where(region => region.NbrOfArmies > 1 && region.Neighbours.All(neighbour => neighbour.IsOccupiedBy(PlayerType.Me)));
-
-                        if (stuckArmies.Any())
-                        {
-                            foreach (var stuckArmie in stuckArmies)
-                            {
-                                //Basic path finding to move away
-                                for (int degree = 1; degree < 6; degree++)
-                                {
-                                    var escapeRoutes = GetNthDegreeNeighbours(stuckArmie, degree);
-                                    if (escapeRoutes.Any())
-                                    {
-                                        var freeway = escapeRoutes.First();
-                                        var transfer = new ArmyTransfer
-                                        {
-                                            SourceRegion = stuckArmie, 
-                                            TargetRegion = freeway, 
-                                            Armies = GetRequiredArmies(stuckArmie, freeway)
-                                        };
-
-                                        transfers.Add(transfer);
-                                        break;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            );
+            SuperRegions.ForEach(CalculateTransfers);
 
             //Don't attack the enemy if we are below the starting round, instead skip this move
             if (Configuration.Current.GetRoundNumber() < Configuration.Current.GetStartRoundNumber())
             {
-                transfers.ForEach(
+                Transfers.ForEach(
                     transfer =>
                     {
                         if (transfer.TargetRegion.IsOccupiedBy(PlayerType.Opponent))
                         {
-                            transfers.Remove(transfer);
+                            Transfers.Remove(transfer);
                         }
                     }
                 );
             }
 
-            return transfers;
+            return Transfers;
         }
 
-        private bool AddCurrentPairToTransferList(Region sourceRegion, Region targetRegion, List<ArmyTransfer> transfers)
+        public void CalculateTransfers(SuperRegion superRegion)
+        {
+            bool skipSuperRegion = StrategyCalculator.SkipSuperRegion(superRegion);
+
+            if (skipSuperRegion)
+            {
+                return;
+            }
+
+            bool transferDone = false;
+
+            bool borderTerritoriesWithEnemyArmies = StrategyCalculator.EnemyBorderTerritories(superRegion, SuperRegions);
+            bool regionsWithEnemyArmies = StrategyCalculator.EnemyRegions(superRegion);
+
+            if (!borderTerritoriesWithEnemyArmies && !regionsWithEnemyArmies)
+            {
+                transferDone = CalculateForNoEnemies(superRegion);
+            }
+
+            if (borderTerritoriesWithEnemyArmies && !transferDone)
+            {
+                transferDone = CalculateForEnemyBorderTerritories(superRegion);
+            }
+
+            if (regionsWithEnemyArmies && !transferDone)
+            {
+                transferDone = CalculateForEnemyRegions(superRegion);
+            }
+
+            var stuckArmies = StrategyCalculator.GetStuckArmies(superRegion, Transfers);
+            CalculateForStuckArmies(stuckArmies);
+        }
+
+        /// <summary>
+        /// Calculates the strategy when there are no enemy regions in this super region.
+        /// </summary>
+        /// <param name="superRegion">The super region.</param>
+        /// <returns></returns>
+        public bool CalculateForNoEnemies(SuperRegion superRegion)
+        {
+            Region targetRegion = null, sourceRegion = null;
+            bool transferDone = false;
+
+            var targetRegions = StrategyCalculator.GetTargetRegions(superRegion, SuperRegions, TargetStrategy.ConquerCurrentSuperRegion);
+            targetRegion = targetRegions.FirstOrDefault();
+
+            /* No neutral armies found in this super region, that should mean we own the continent.
+             * Let's explore the world and go to a new super region
+             * */
+            if (targetRegion == null)
+            {
+                targetRegions = StrategyCalculator.GetTargetRegions(superRegion, SuperRegions, TargetStrategy.ConquerOtherSuperRegions);
+                targetRegion = targetRegions.FirstOrDefault();
+
+                if (targetRegion != null)
+                {
+                    //We'll want to make more than 1 move
+                    foreach (var cTargetRegion in targetRegions)
+                    {
+                        sourceRegion = StrategyCalculator.GetSourceRegion(cTargetRegion, Transfers, SourceStrategy.DominateOtherSuperRegions);
+                        transferDone = AddCurrentPairToTransferList(sourceRegion, cTargetRegion);
+                    }
+                }
+                else
+                {
+                    targetRegions = StrategyCalculator.GetTargetRegions(superRegion, SuperRegions, TargetStrategy.EnemyInvasionPaths);
+                    targetRegion = targetRegions.FirstOrDefault();
+
+                    if (targetRegion != null)
+                    {
+                        sourceRegion = StrategyCalculator.GetSourceRegion(targetRegion, Transfers, SourceStrategy.AttackEnemyInvasionPath);
+                        transferDone = AddCurrentPairToTransferList(sourceRegion, targetRegion);
+                    }
+                }
+            }
+
+            // Neutral regions found in this super region
+            else
+            {
+                //When we seem to be alone on this superregion, we'll want to make more than 1 move
+                for (int i = 0; i < targetRegions.Count(); i++)
+                {
+                    var cTargetRegion = targetRegions.Skip(i).First();
+
+                    sourceRegion = StrategyCalculator.GetSourceRegion(cTargetRegion, Transfers, SourceStrategy.DominateCurrentSuperRegion);
+                    if (sourceRegion != null)
+                    {
+                        //We can conquer multiple neutral regions with one army.
+                        if (sourceRegion.NbrOfArmies > 10)
+                        {
+                            i--;
+                            for (int n = sourceRegion.NbrOfArmies; n > 5 && i < targetRegions.Count() - 1; )
+                            {
+                                cTargetRegion = targetRegions.ToArray()[++i];
+                                int nbrOfArmies = 5;
+                                if (n < 10)
+                                {
+                                    nbrOfArmies = n - 1;
+                                }
+                                transferDone = AddCurrentPairToTransferList(sourceRegion, cTargetRegion, nbrOfArmies);
+                                n = n - nbrOfArmies;
+                            }
+                        }
+                        else
+                        {
+                            if (targetRegion.NbrOfArmies <= sourceRegion.NbrOfArmies)
+                            {
+                                transferDone = AddCurrentPairToTransferList(sourceRegion, cTargetRegion);
+                            }
+                        }
+                    }
+                }
+            }
+            /*
+             * Its not good to leave 3 armies on 1 region and 4 armies on another region.
+             * We have to move armies to the largest region to conquer the super region faster.
+             * For now, only do this when there are no enemies spotted
+             * */
+            var largestRegion = superRegion // Build error because needs fixing
+                .ChildRegions
+                .Find(PlayerType.Me)
+                .Where(region => region.NbrOfArmies > 1)
+                .Where(region => !region.Neighbours.All(n => n.IsOccupiedBy(PlayerType.Me)))
+                .OrderByDescending(region => region.NbrOfArmies)
+                .FirstOrDefault();
+
+            if (largestRegion != null)
+            {
+                var qualifiedArmies = superRegion
+                    .ChildRegions
+                    .Find(PlayerType.Me)
+                    .Where(region => region.NbrOfArmies > 1)
+                    .Where(region => largestRegion.Neighbours.Contains(region))
+                    .Where(region => Transfers.None(t => t.SourceRegion.ID == region.ID));
+                if (qualifiedArmies.Any())
+                {
+                    foreach (var qualifiedArmy in qualifiedArmies)
+                    {
+                        transferDone = AddCurrentPairToTransferList(qualifiedArmy, largestRegion);
+                    }
+                }
+            }
+
+            return transferDone;
+        }
+
+        /// <summary>
+        /// Calculates the strategy when there are enemy border territories.
+        /// </summary>
+        /// <param name="superRegion">The super region.</param>
+        /// <returns></returns>
+        public bool CalculateForEnemyBorderTerritories(SuperRegion superRegion)
+        {
+            Region targetRegion = null, sourceRegion = null;
+            bool transferDone = false;
+
+            var invadingBorderTerritories = StrategyCalculator.GetTargetRegions(superRegion, SuperRegions, TargetStrategy.EnemyInvasionPaths);
+            var invadingBorderTerritory = invadingBorderTerritories.FirstOrDefault();
+
+            /*
+             * We can't attack the biggest enemy region. Let's try another
+             * Every conquered region means the opponent might loose his super region bonus!
+             * */
+            if (invadingBorderTerritory == null)
+            {
+                invadingBorderTerritory = superRegion
+                .InvasionPaths
+                .Where(invasionpath => invasionpath.IsOccupiedBy(PlayerType.Opponent))
+                .OrderBy(region => region.NbrOfArmies)
+                .FirstOrDefault();
+            }
+
+            if (invadingBorderTerritory != null)
+            {
+                int enemyArmies = invadingBorderTerritory.NbrOfArmies;
+
+                /* Let's see if we can attack. There is  60% change per attacking army. 
+                 * We will be extra safe and use a 50% chance.
+                 * This means we'll need at least double as much armies as our opponent.
+                 * If this isn't the case, we'll send more armies to this region and defend our grounds.
+                 * 
+                 * */
+                var possibleAttackingRegion = superRegion
+                    .ChildRegions
+                    .Find(PlayerType.Me)
+                    .Where(region => region.Neighbours.Contains(invadingBorderTerritory))
+                    .Where(region => (region.NbrOfArmies >= enemyArmies * 2 || region.NbrOfArmies > Configuration.Current.GetMaximumTreshold()) && region.NbrOfArmies > 5)
+                    .OrderByDescending(region => region.NbrOfArmies)
+                    .FirstOrDefault();
+
+                //We can attack!
+                if (possibleAttackingRegion != null)
+                {
+                    targetRegion = invadingBorderTerritory;
+                    sourceRegion = possibleAttackingRegion;
+                }
+
+                /* We can't attack, so let's defend.
+                 * We'll send armies to the region that can be attacked with the least number of armies
+                 * We'll prefer sending from regions that can't be attacked.
+                 **/
+                else
+                {
+                    targetRegion = invadingBorderTerritory
+                        .Neighbours
+                        .Find(PlayerType.Me)
+                        .Where(region => SuperRegions.Get(region) == superRegion)
+                        .OrderBy(region => region.NbrOfArmies)
+                        .FirstOrDefault();
+
+                    if (targetRegion != null)
+                    {
+
+                        sourceRegion = targetRegion
+                            .Neighbours
+                            .Find(PlayerType.Me)
+                            .OrderByDescending(region => region.NbrOfArmies)
+                            .FirstOrDefault();
+                    }
+                }
+
+                transferDone = AddCurrentPairToTransferList(sourceRegion, targetRegion);
+
+                var targetRegions = superRegion
+                    .ChildRegions
+                    .Where(region => region.IsOccupiedBy(PlayerType.Neutral))
+                    .OrderBy(region => region.Neighbours.Count(neighbor => SuperRegions.Get(neighbor) != SuperRegions.Get(region)) > 0 ? 1 : 0)
+                    .ThenByDescending(region => region.Neighbours.Count(neighbor => neighbor.IsOccupiedBy(PlayerType.Neutral) && SuperRegions.Get(neighbor) == SuperRegions.Get(region)) > 0 ? 1 : 0)
+                    .ThenByDescending(region =>
+                        region.Neighbours.Where(neighbour => neighbour.IsOccupiedBy(PlayerType.Me)).Select(reg => reg.NbrOfArmies).Sum()
+                    );
+
+                //When we seem to be alone on this superregion, we'll want to make more than 1 move
+                foreach (var cTargetRegion in targetRegions)
+                {
+                    sourceRegion = cTargetRegion
+                    .Neighbours
+                    .Where(region => SuperRegions.Get(region) == superRegion)
+                    .Where(region => region.IsOccupiedBy(PlayerType.Me) && region.NbrOfArmies > 5)
+                    .Where(region => Transfers.Count(t => t.SourceRegion.ID == region.ID) == 0)
+                    .OrderByDescending(region => region.NbrOfArmies)
+                    .FirstOrDefault();
+
+                    transferDone = AddCurrentPairToTransferList(sourceRegion, cTargetRegion);
+                }
+            }
+
+            return transferDone;
+        }
+
+        /// <summary>
+        /// Calculates the strategy when there are enemy regions in the super region
+        /// </summary>
+        /// <param name="superRegion">The super region.</param>
+        /// <returns></returns>
+        public bool CalculateForEnemyRegions(SuperRegion superRegion)
+        {
+            Region targetRegion = null, sourceRegion = null;
+            bool transferDone = false;
+
+            var hostileRegion = superRegion
+                .ChildRegions
+                .Where(region => region.IsOccupiedBy(PlayerType.Opponent))
+                .Where(region => region.Neighbours.Any(n => n.IsOccupiedBy(PlayerType.Me) && n.NbrOfArmies > 5 && (n.NbrOfArmies >= region.NbrOfArmies * 2 || n.NbrOfArmies > Configuration.Current.GetMaximumTreshold())))
+                .OrderBy(region => region.NbrOfArmies)
+                .FirstOrDefault();
+
+            if (hostileRegion != null)
+            {
+                int enemyArmies = hostileRegion.NbrOfArmies;
+
+                /* Let's see if we can attack. There is  60% change per attacking army. 
+                 * We will be extra safe and use a 50% chance.
+                 * This means we'll need at least double as much armies as our opponent.
+                 * If this isn't the case, we'll send more armies to this region and defend our grounds.
+                 * 
+                 * */
+
+                var possibleAttackingRegion = superRegion
+                    .ChildRegions
+                    .Find(PlayerType.Me)
+                    .Where(region => region.Neighbours.Contains(hostileRegion))
+                    .Where(
+                        region =>
+                            (region.NbrOfArmies >= enemyArmies * 2 ||
+                             region.NbrOfArmies > Configuration.Current.GetMaximumTreshold()) &&
+                            region.NbrOfArmies > 5)
+                    .OrderByDescending(region => region.NbrOfArmies)
+                    .FirstOrDefault();
+
+                //We can attack!
+                if (possibleAttackingRegion != null)
+                {
+                    targetRegion = hostileRegion;
+                    sourceRegion = possibleAttackingRegion;
+                }
+
+                    /* We can't attack, so let's defend.
+                 * We'll send armies to the region that can be attacked with the least number of armies
+                 * We'll prefer sending from regions that can't be attacked.
+                 **/
+                else
+                {
+                    targetRegion = hostileRegion
+                        .Neighbours
+                        .Find(PlayerType.Me)
+                        .Where(region => SuperRegions.Get(region) == superRegion)
+                        .OrderBy(region => region.NbrOfArmies)
+                        .FirstOrDefault();
+
+                    if (targetRegion != null)
+                    {
+
+                        sourceRegion = targetRegion
+                            .Neighbours
+                            .Find(PlayerType.Me)
+                            .OrderByDescending(region => region.NbrOfArmies)
+                            .FirstOrDefault();
+                    }
+                    else
+                    {
+                        //We can't defend a region, probably because we don't have armies nearby, so let's conquer some regions instead
+                        var targetRegions = superRegion
+                            .ChildRegions
+                            .Where(region => region.IsOccupiedBy(PlayerType.Neutral))
+                            .OrderBy(
+                                region =>
+                                    region.Neighbours.Count(
+                                        neighbor =>
+                                            SuperRegions.Get(neighbor) != SuperRegions.Get(region)) > 0
+                                        ? 1
+                                        : 0)
+                            .ThenByDescending(
+                                region =>
+                                    region.Neighbours.Count(
+                                        neighbor =>
+                                            neighbor.IsOccupiedBy(PlayerType.Neutral) &&
+                                            SuperRegions.Get(neighbor) == SuperRegions.Get(region)) > 0
+                                        ? 1
+                                        : 0)
+                            .ThenByDescending(region =>
+                                region.Neighbours.Where(
+                                    neighbour => neighbour.IsOccupiedBy(PlayerType.Me))
+                                    .Select(reg => reg.NbrOfArmies)
+                                    .Sum()
+                            );
+
+                        foreach (var cTargetRegion in targetRegions)
+                        {
+                            sourceRegion = cTargetRegion
+                                .Neighbours
+                                .Where(region => SuperRegions.Get(region) == superRegion)
+                                .Where(
+                                    region =>
+                                        region.IsOccupiedBy(PlayerType.Me) && region.NbrOfArmies > 5)
+                                .Where(
+                                    region => Transfers.Count(t => t.SourceRegion.ID == region.ID) == 0)
+                                .OrderByDescending(region => region.NbrOfArmies)
+                                .FirstOrDefault();
+
+                            if (sourceRegion != null)
+                            {
+                                transferDone = AddCurrentPairToTransferList(sourceRegion, cTargetRegion);
+                            }
+                        }
+                    }
+                }
+
+                if (!transferDone)
+                {
+                    transferDone = AddCurrentPairToTransferList(sourceRegion, targetRegion);
+                }
+            }
+
+            /*
+             * There is a hostile region in this super regio but we can not attack it 
+             * Maybe we dont have enough armies nearby
+             * So lets try doing something else, like conquering neutral armies
+             */
+            else
+            {
+                var targetRegions = superRegion
+                .ChildRegions
+                .Where(region => region.IsOccupiedBy(PlayerType.Neutral))
+                .OrderBy(region => region.Neighbours.Count(neighbor => SuperRegions.Get(neighbor) != SuperRegions.Get(region)) > 0 ? 1 : 0)
+                .ThenByDescending(region => region.Neighbours.Count(neighbor => neighbor.IsOccupiedBy(PlayerType.Neutral) && SuperRegions.Get(neighbor) == SuperRegions.Get(region)) > 0 ? 1 : 0)
+                .ThenByDescending(region =>
+                    region.Neighbours.Where(neighbour => neighbour.IsOccupiedBy(PlayerType.Me)).Select(reg => reg.NbrOfArmies).Sum()
+                );
+
+                for (int i = 0; i < targetRegions.Count(); i++)
+                {
+                    var cTargetRegion = targetRegions.ToArray()[i];
+                    sourceRegion = cTargetRegion
+                    .Neighbours
+                    .Where(region => SuperRegions.Get(region) == superRegion)
+                    .Where(region => region.IsOccupiedBy(PlayerType.Me) && region.NbrOfArmies > 5)
+                    .Where(region => Transfers.Count(t => t.SourceRegion.ID == region.ID) == 0)
+                    .OrderByDescending(region => region.NbrOfArmies)
+                    .FirstOrDefault();
+
+                    if (sourceRegion != null)
+                    {
+
+                        //We can conquer multiple neutral regions with one army.
+                        if (sourceRegion.NbrOfArmies > 10)
+                        {
+                            i--;
+                            for (int n = sourceRegion.NbrOfArmies; n > 5 && i < targetRegions.Count() - 1; )
+                            {
+                                cTargetRegion = targetRegions.ToArray()[++i];
+                                int nbrOfArmies = 5;
+                                if (n < 10)
+                                {
+                                    nbrOfArmies = n - 1;
+                                }
+                                transferDone = AddCurrentPairToTransferList(sourceRegion, cTargetRegion, nbrOfArmies);
+                                n = n - nbrOfArmies;
+                            }
+                        }
+                        else
+                        {
+                            if (targetRegion.NbrOfArmies <= sourceRegion.NbrOfArmies)
+                            {
+                                transferDone = AddCurrentPairToTransferList(sourceRegion, cTargetRegion);
+                            }
+                        }
+                    }
+                }
+            }
+
+            return transferDone;
+        }
+
+        /// <summary>
+        /// Armies that are stuck serve no purpose. We need to move them away where they can be of any use.
+        /// </summary>
+        /// <param name="stuckArmies">The stuck armies.</param>
+        public void CalculateForStuckArmies(List<Region> stuckArmies)
+        {
+            if (stuckArmies.Any())
+            {
+                foreach (var stuckArmie in stuckArmies)
+                {
+                    //Basic path finding to move away
+                    for (int degree = 1; degree < 6; degree++)
+                    {
+                        var escapeRoute = GetNthDegreeNeighbours(stuckArmie, degree).FirstOrDefault();
+                        if (escapeRoute != null)
+                        {
+                            var transfer = new ArmyTransfer
+                            {
+                                SourceRegion = stuckArmie,
+                                TargetRegion = escapeRoute,
+                                Armies = GetRequiredArmies(stuckArmie, escapeRoute)
+                            };
+
+                            Transfers.Add(transfer);
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        private bool AddCurrentPairToTransferList(Region sourceRegion, Region targetRegion)
         {
             if (sourceRegion == null || targetRegion == null)
             {
                 return false;
             }
 
-            return AddCurrentPairToTransferList(sourceRegion, targetRegion, transfers, GetRequiredArmies(sourceRegion, targetRegion));
-
+            return AddCurrentPairToTransferList(sourceRegion, targetRegion,  GetRequiredArmies(sourceRegion, targetRegion));
         }
 
-        private bool AddCurrentPairToTransferList(Region sourceRegion, Region targetRegion, List<ArmyTransfer> transfers, int nbrOfArmies)
+        private bool AddCurrentPairToTransferList(Region sourceRegion, Region targetRegion, int nbrOfArmies)
         {
             if (sourceRegion == null || targetRegion == null)
             {
@@ -973,7 +957,7 @@ namespace WarlightAI.GameBoard
                     Armies = nbrOfArmies
                 };
 
-                transfers.Add(transfer);
+                Transfers.Add(transfer);
                 UpdateRegion(sourceRegion.ID, Configuration.Current.GetMyBotName(), sourceRegion.NbrOfArmies - nbrOfArmies);
 
                 return true;
@@ -987,36 +971,36 @@ namespace WarlightAI.GameBoard
             return sourceRegion.NbrOfArmies - 1;
         }
 
-        private static IEnumerable<Region> GetNthDegreeNeighbours(Region stuckArmie, int degree)
+        private static IEnumerable<Region> GetNthDegreeNeighbours(Region region, int degree)
         {
             switch (degree)
             { 
                 default:
                     return Enumerable.Empty<Region>();
                 case 1:
-                    return stuckArmie.Neighbours
+                    return region.Neighbours
                         .Where(n => n.Neighbours
                             .Any(nn => !nn.IsOccupiedBy(PlayerType.Me)));
                 case 2:
-                    return stuckArmie.Neighbours
+                    return region.Neighbours
                         .Where(n => n.Neighbours
                             .Any(nn => nn.Neighbours
                                 .Any(nnn => !nnn.IsOccupiedBy(PlayerType.Me))));
                 case 3:
-                    return stuckArmie.Neighbours
+                    return region.Neighbours
                         .Where(n => n.Neighbours
                             .Any(nn => nn.Neighbours
                                 .Any(nnn => nnn.Neighbours
                                     .Any(nnnn => !nnnn.IsOccupiedBy(PlayerType.Me)))));
                 case 4:
-                    return stuckArmie.Neighbours
+                    return region.Neighbours
                         .Where(n => n.Neighbours
                             .Any(nn => nn.Neighbours
                                 .Any(nnn => nnn.Neighbours
                                     .Any(nnnn => nnnn.Neighbours
                                         .Any(nnnnn => !nnnnn.IsOccupiedBy(PlayerType.Me))))));
                 case 5:
-                    return stuckArmie.Neighbours
+                    return region.Neighbours
                         .Where(n => n.Neighbours
                             .Any(nn => nn.Neighbours
                                 .Any(nnn => nnn.Neighbours

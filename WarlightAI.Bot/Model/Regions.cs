@@ -58,7 +58,7 @@ namespace WarlightAI.Model
         }
 
         /// <summary>
-        /// Finds all regions that are occupied by a specified player
+        /// Finds all regions that are occupied by a specified player.
         /// </summary>
         /// <param name="playerType">The player type.</param>
         /// <returns></returns>

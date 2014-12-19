@@ -45,6 +45,8 @@
     <Compile Include="GameBoard\Configuration.cs" />
     <Compile Include="GameBoard\GameSettings.cs" />
     <Compile Include="Helpers\ExtensionMethods.cs" />
+    <Compile Include="Helpers\StrategyCalculator.cs" />
+    <Compile Include="Model\OrderStrategy.cs" />
     <Compile Include="Model\Player.cs" />
     <Compile Include="Model\PlayerType.cs" />
     <Compile Include="IO\Bot.cs" />
@@ -56,8 +58,10 @@
     <Compile Include="Model\Region.cs" />
     <Compile Include="Model\Regions.cs" />
     <Compile Include="Model\RegionStatus.cs" />
+    <Compile Include="Model\SourceStrategy.cs" />
     <Compile Include="Model\SuperRegion.cs" />
     <Compile Include="Model\SuperRegions.cs" />
+    <Compile Include="Model\TargetStrategy.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

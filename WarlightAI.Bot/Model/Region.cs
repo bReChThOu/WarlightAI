@@ -20,6 +20,13 @@ namespace WarlightAI.Model
         /// </value>
         public int ID { get; set; }
 
+        /// <summary>
+        /// Gets or sets the super region.
+        /// </summary>
+        /// <value>
+        /// The super region.
+        /// </value>
+        public SuperRegion SuperRegion { get; set; }
 
         /// <summary>
         /// Gets or sets the player.

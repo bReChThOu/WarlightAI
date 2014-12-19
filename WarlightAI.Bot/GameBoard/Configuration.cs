@@ -14,12 +14,12 @@ namespace WarlightAI.GameBoard
 {
     public class Configuration
     {
-		private static Configuration _instance;
+        private static Configuration _instance;
 
         /// <summary>
         /// The instance
         /// </summary>
-		public static Configuration Current
+        public static Configuration Current
         {
             [DebuggerStepThrough]
             get 
@@ -66,8 +66,8 @@ namespace WarlightAI.GameBoard
         /// <returns></returns>
         public Player GetPlayerByName(String name)
         {
-			return Players
-				.FirstOrDefault(player => String.Equals(player.Name, name, StringComparison.InvariantCultureIgnoreCase));
+            return Players
+                .FirstOrDefault(player => String.Equals(player.Name, name, StringComparison.InvariantCultureIgnoreCase));
         }
 
         /// <summary>
