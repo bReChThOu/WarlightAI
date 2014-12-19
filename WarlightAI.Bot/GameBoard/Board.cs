@@ -583,36 +583,7 @@ namespace WarlightAI.GameBoard
                     }
                 }
             }
-            /*
-             * Its not good to leave 3 armies on 1 region and 4 armies on another region.
-             * We have to move armies to the largest region to conquer the super region faster.
-             * For now, only do this when there are no enemies spotted
-             * */
-            var largestRegion = superRegion // Build error because needs fixing
-                .ChildRegions
-                .Find(PlayerType.Me)
-                .Where(region => region.NbrOfArmies > 1)
-                .Where(region => !region.Neighbours.All(n => n.IsOccupiedBy(PlayerType.Me)))
-                .OrderByDescending(region => region.NbrOfArmies)
-                .FirstOrDefault();
-
-            if (largestRegion != null)
-            {
-                var qualifiedArmies = superRegion
-                    .ChildRegions
-                    .Find(PlayerType.Me)
-                    .Where(region => region.NbrOfArmies > 1)
-                    .Where(region => largestRegion.Neighbours.Contains(region))
-                    .Where(region => Transfers.None(t => t.SourceRegion.ID == region.ID));
-                if (qualifiedArmies.Any())
-                {
-                    foreach (var qualifiedArmy in qualifiedArmies)
-                    {
-                        transferDone = AddCurrentPairToTransferList(qualifiedArmy, largestRegion);
-                    }
-                }
-            }
-
+            
             return transferDone;
         }
 
@@ -892,7 +863,7 @@ namespace WarlightAI.GameBoard
                         }
                         else
                         {
-                            if (targetRegion.NbrOfArmies <= sourceRegion.NbrOfArmies)
+                            if (cTargetRegion.NbrOfArmies <= sourceRegion.NbrOfArmies)
                             {
                                 transferDone = AddCurrentPairToTransferList(sourceRegion, cTargetRegion);
                             }

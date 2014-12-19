@@ -16,7 +16,7 @@ namespace WarlightAI
             catch (Exception ex)
             {
                 var exitMsg = ex.Message + (ex.InnerException != null ? ex.InnerException.Message : "");
-                Console.Write("Bot crashed. Exception was: {0}", exitMsg);
+                Console.Error.Write("Bot crashed. Exception was: {0}", exitMsg);
             }
         }
     }

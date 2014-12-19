@@ -72,7 +72,6 @@ namespace WarlightAI.IO
                     subcommand = commandargs[1].Trim().ToLowerInvariant();
                     switch (subcommand)
                     {
-                        default:
                         case "super_regions":
                             for (int i = 2; i < commandargs.Length; i++)
                             {
