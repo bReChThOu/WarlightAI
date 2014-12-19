@@ -466,6 +466,10 @@ namespace WarlightAI.GameBoard
             return Transfers;
         }
 
+        /// <summary>
+        /// Calculates the transfers.
+        /// </summary>
+        /// <param name="superRegion">The super region.</param>
         public void CalculateTransfers(SuperRegion superRegion)
         {
             bool skipSuperRegion = StrategyCalculator.SkipSuperRegion(superRegion);
