@@ -101,7 +101,7 @@ namespace WarlightAI.Model
         /// </returns>
         public override string ToString()
         {
-            return String.Format("{0} - {1}", ID, Player);
+            return string.Format("ID: {0} - Player: {1} - Armies: {2}", ID, Player, NbrOfArmies);
         }
 
     }

@@ -4,6 +4,7 @@
 // <author>Brecht Houben</author>
 // <date>10/03/2014</date>
 using System;
+using System.IO;
 using System.Text.RegularExpressions;
 
 namespace WarlightAI.IO
@@ -29,8 +30,16 @@ namespace WarlightAI.IO
         /// <summary>
         /// Runs this instance.
         /// </summary>
-        public void Run()
+        public void Run(bool debug)
         {
+            if (debug)
+            {
+                foreach (var line in File.ReadAllLines(@"C:\localdata\houbenb\My Documents\bot.txt"))
+                {
+                    parser.Parse(line);
+                }
+            }
+
             while (true)
             {
                 /* Normalize the input:

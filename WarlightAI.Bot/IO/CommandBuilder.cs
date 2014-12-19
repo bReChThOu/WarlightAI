@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Linq;
 
 using WarlightAI.GameBoard;
+using WarlightAI.Helpers;
 using WarlightAI.Model;
 
 namespace WarlightAI.IO
@@ -17,7 +18,7 @@ namespace WarlightAI.IO
         /// <summary>
         /// Outputs the starting region.
         /// </summary>
-        /// <param name="regions">The regions.</param>
+        /// <param name="region">The region.</param>
         public static void OutputStartingRegion(Region region)
         {
             Output(region.ID.ToString()); //.ToString() needed for mono compliance
@@ -38,7 +39,7 @@ namespace WarlightAI.IO
         /// <param name="transfers">The transfers.</param>
         public static void OutputArmyTransfers(IEnumerable<ArmyTransfer> transfers)
         {
-            if (transfers.Count() == 0)
+            if (transfers.None())
             {
                 Output("No moves");
                 return;

@@ -9,7 +9,9 @@ namespace WarlightAI
         {
             try
             {
-                new Bot().Run();
+                var debug = args.Length == 1 && args[0].Equals("debug", StringComparison.OrdinalIgnoreCase);
+
+                new Bot().Run(debug);
             }
             catch (Exception ex)
             {
