@@ -863,7 +863,7 @@ namespace WarlightAI.GameBoard
                         }
                         else
                         {
-                            if (cTargetRegion.NbrOfArmies <= sourceRegion.NbrOfArmies)
+                            if (sourceRegion.NbrOfArmies >= cTargetRegion.NbrOfArmies * 2)
                             {
                                 transferDone = AddCurrentPairToTransferList(sourceRegion, cTargetRegion);
                             }
