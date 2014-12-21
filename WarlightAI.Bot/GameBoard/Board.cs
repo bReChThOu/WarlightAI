@@ -558,7 +558,7 @@ namespace WarlightAI.GameBoard
                     if (sourceRegion != null)
                     {
                         //We can conquer multiple neutral regions with one army.
-                        if (sourceRegion.NbrOfArmies > 10)
+                        if (sourceRegion.NbrOfArmies > 10 && cTargetRegion.NbrOfArmies <= 4)
                         {
                             i--;
                             for (int n = sourceRegion.NbrOfArmies; n > 5 && i < targetRegions.Count() - 1; )
