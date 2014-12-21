@@ -17,6 +17,11 @@ namespace WarlightAI.Model
         ConquerCurrentSuperRegion,
 
         /// <summary>
+        /// The conquer all strategy
+        /// </summary>
+        ConquerAll,
+
+        /// <summary>
         /// The conquer other super regions strategy
         /// </summary>
         ConquerOtherSuperRegions,

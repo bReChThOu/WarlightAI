@@ -105,9 +105,10 @@ namespace WarlightAI.Helpers
         /// </summary>
         /// <param name="superRegion">The super region.</param>
         /// <param name="allSuperRegions">All super regions.</param>
+        /// <param name="transfers">The transfers.</param>
         /// <param name="targetStrategy">The target strategy.</param>
         /// <returns></returns>
-        public static IEnumerable<Region> GetTargetRegions(SuperRegion superRegion, SuperRegions allSuperRegions, TargetStrategy targetStrategy)
+        public static IEnumerable<Region> GetTargetRegions(SuperRegion superRegion, SuperRegions allSuperRegions, IEnumerable<ArmyTransfer> transfers, TargetStrategy targetStrategy)
         {
             IEnumerable<Region> targetRegions = new List<Region>();
 
@@ -130,6 +131,30 @@ namespace WarlightAI.Helpers
 
                     break;
 
+                case TargetStrategy.ConquerAll:
+                    /*
+                     * Searches for regions in all super regions that are not occupied (neutral)
+                     * Order by:
+                     *  - Take regions away from the borders first
+                     *  - Regions with neutral armies first, to ensure our expansion drift
+                     *  - The amount of our regions nearby
+                     * */
+                    var internalRegions = superRegion
+                        .ChildRegions
+                        .OccupiedBy(PlayerType.Neutral);
+
+                    var externalRegions = superRegion
+                        .ChildRegions
+                        .OccupiedBy(PlayerType.Me)
+                        .SelectMany(region => region.Neighbours.Where(neighbour => neighbour.IsOccupiedBy(PlayerType.Neutral) && neighbour.SuperRegion != superRegion));
+
+                    targetRegions = internalRegions.Concat(externalRegions)
+                        .OrderRegions(allSuperRegions, OrderStrategy.InternalFirst)
+                        .ThenOrderRegions(allSuperRegions, OrderStrategy.NeutralNeighboursFirst)
+                        .ThenOrderRegions(allSuperRegions, OrderStrategy.MostArmiesNearby);
+
+                    break;
+
                 case TargetStrategy.ConquerOtherSuperRegions:
                     /*
                      * Searches for regions in other super regions that are not occupied (neutral)
@@ -144,10 +169,12 @@ namespace WarlightAI.Helpers
                 case TargetStrategy.EnemyInvasionPaths:
                     /*
                      * Searches for enemy invasion paths
+                     * Skip regions that are a target already, we should have conquered them already in earlier moves
                      * */
                     targetRegions = superRegion
                         .InvasionPaths
                         .OccupiedBy(PlayerType.Opponent)
+                        .NoTargetYet(transfers)
                         .OrderRegions(OrderStrategy.NumberOfArmies);
 
                     break;

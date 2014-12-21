@@ -345,7 +345,7 @@ namespace WarlightAI.GameBoard
                    .ThenByDescending(region => region.NbrOfArmies)
                    .FirstOrDefault();
 
-                var armyplacement = new ArmyPlacement { Armies = 4, Region = primaryRegion };
+                var armyplacement = new ArmyPlacement { Armies = 3, Region = primaryRegion };
                 placements.Add(armyplacement);
 
                 if (secundaryRegion == null)
@@ -353,7 +353,7 @@ namespace WarlightAI.GameBoard
                     secundaryRegion = primaryRegion;
                 }
 
-                armyplacement = new ArmyPlacement { Armies = startingArmies - 4, Region = secundaryRegion };
+                armyplacement = new ArmyPlacement { Armies = startingArmies - 3, Region = secundaryRegion };
                 placements.Add(armyplacement);
             }
             if (startingArmies >= 7 && startingArmies <= 9)
@@ -513,7 +513,7 @@ namespace WarlightAI.GameBoard
             Region targetRegion = null, sourceRegion = null;
             bool transferDone = false;
 
-            var targetRegions = StrategyCalculator.GetTargetRegions(superRegion, SuperRegions, TargetStrategy.ConquerCurrentSuperRegion);
+            var targetRegions = StrategyCalculator.GetTargetRegions(superRegion, SuperRegions, Transfers, TargetStrategy.ConquerAll);
             targetRegion = targetRegions.FirstOrDefault();
 
             /* No neutral armies found in this super region, that should mean we own the continent.
@@ -521,7 +521,7 @@ namespace WarlightAI.GameBoard
              * */
             if (targetRegion == null)
             {
-                targetRegions = StrategyCalculator.GetTargetRegions(superRegion, SuperRegions, TargetStrategy.ConquerOtherSuperRegions);
+                targetRegions = StrategyCalculator.GetTargetRegions(superRegion, SuperRegions, Transfers, TargetStrategy.ConquerOtherSuperRegions);
                 targetRegion = targetRegions.FirstOrDefault();
 
                 if (targetRegion != null)
@@ -535,7 +535,7 @@ namespace WarlightAI.GameBoard
                 }
                 else
                 {
-                    targetRegions = StrategyCalculator.GetTargetRegions(superRegion, SuperRegions, TargetStrategy.EnemyInvasionPaths);
+                    targetRegions = StrategyCalculator.GetTargetRegions(superRegion, SuperRegions, Transfers, TargetStrategy.EnemyInvasionPaths);
                     targetRegion = targetRegions.FirstOrDefault();
 
                     if (targetRegion != null)
@@ -575,9 +575,9 @@ namespace WarlightAI.GameBoard
                         }
                         else
                         {
-                            if (sourceRegion.NbrOfArmies >= targetRegion.NbrOfArmies * 2)
+                            if (sourceRegion.NbrOfArmies >= cTargetRegion.NbrOfArmies * 2 + 1)
                             {
-                                transferDone = AddCurrentPairToTransferList(sourceRegion, cTargetRegion);
+                                transferDone = AddCurrentPairToTransferList(sourceRegion, cTargetRegion, cTargetRegion.NbrOfArmies * 2);
                             }
                         }
                     }
@@ -597,7 +597,7 @@ namespace WarlightAI.GameBoard
             Region targetRegion = null, sourceRegion = null;
             bool transferDone = false;
 
-            var invadingBorderTerritories = StrategyCalculator.GetTargetRegions(superRegion, SuperRegions, TargetStrategy.EnemyInvasionPaths);
+            var invadingBorderTerritories = StrategyCalculator.GetTargetRegions(superRegion, SuperRegions, Transfers, TargetStrategy.EnemyInvasionPaths);
             var invadingBorderTerritory = invadingBorderTerritories.FirstOrDefault();
 
             /*
@@ -653,10 +653,11 @@ namespace WarlightAI.GameBoard
 
                     if (targetRegion != null)
                     {
-
+                        // Dont transfer from regions that have enemy neighbours
                         sourceRegion = targetRegion
                             .Neighbours
                             .Find(PlayerType.Me)
+                            .Where(region => region.Neighbours.None(neighbour => neighbour.IsOccupiedBy(PlayerType.Opponent)))
                             .OrderByDescending(region => region.NbrOfArmies)
                             .FirstOrDefault();
                     }
@@ -679,7 +680,7 @@ namespace WarlightAI.GameBoard
                     sourceRegion = cTargetRegion
                     .Neighbours
                     .Where(region => SuperRegions.Get(region) == superRegion)
-                    .Where(region => region.IsOccupiedBy(PlayerType.Me) && region.NbrOfArmies > 5)
+                    .Where(region => region.IsOccupiedBy(PlayerType.Me) && region.NbrOfArmies >= cTargetRegion.NbrOfArmies * 2 + 1)
                     .Where(region => Transfers.Count(t => t.SourceRegion.ID == region.ID) == 0)
                     .OrderByDescending(region => region.NbrOfArmies)
                     .FirstOrDefault();
