@@ -91,7 +91,7 @@ namespace WarlightAI.Helpers
         }
 
         /// <summary>
-        /// Returns all elements from a sequence that have the same super region as a given region
+        /// Returns all elements from a sequence that have the same super region as a given region.
         /// </summary>
         /// <param name="source">The source.</param>
         /// <param name="otherRegion">The other region.</param>
@@ -99,6 +99,17 @@ namespace WarlightAI.Helpers
         public static IEnumerable<Region> OnSameSuperRegion(this IEnumerable<Region> source, Region otherRegion)
         {
             return source.Where(region => region.SuperRegion == otherRegion.SuperRegion);
+        }
+
+        /// <summary>
+        /// Returns all elements from a sequence that have another super region as a given region.
+        /// </summary>
+        /// <param name="source">The source.</param>
+        /// <param name="otherRegion">The other region.</param>
+        /// <returns></returns>
+        public static IEnumerable<Region> OnOtherSuperRegion(this IEnumerable<Region> source, Region otherRegion)
+        {
+            return source.Where(region => region.SuperRegion != otherRegion.SuperRegion);
         }
 
         /// <summary>

@@ -22,6 +22,21 @@ namespace WarlightAI.Model
         NeutralNeighboursFirst,
 
         /// <summary>
+        /// Regions that have neutral neighbours in other super regions come first
+        /// </summary>
+        NeutralNeighboursOnOtherSuperRegionsFirst,
+
+        /// <summary>
+        /// Regions on small super regions come first
+        /// </summary>
+        SmallSuperRegionsFirst,
+
+        /// <summary>
+        /// Regions that have enemy neighbours come first
+        /// </summary>
+        EnemyNeighboursFirst,
+
+        /// <summary>
         /// Regions are ordered by the number of armies i have nearby
         /// </summary>
         MostArmiesNearby,

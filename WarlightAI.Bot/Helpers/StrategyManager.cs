@@ -10,7 +10,7 @@ using WarlightAI.Model;
 
 namespace WarlightAI.Helpers
 {
-    public static class StrategyCalculator
+    public static class StrategyManager
     {
         /// <summary>
         /// Calculates if there are border territories with enemy armies in this super region
@@ -114,7 +114,7 @@ namespace WarlightAI.Helpers
         /// <param name="transfers">The transfers.</param>
         /// <param name="targetStrategy">The target strategy.</param>
         /// <returns></returns>
-        public static IEnumerable<Region> GetTargetRegions(SuperRegion superRegion, SuperRegions allSuperRegions, IEnumerable<ArmyTransfer> transfers, TargetStrategy targetStrategy)
+        public static IEnumerable<Region> GetTargetRegions(SuperRegion superRegion, IEnumerable<ArmyTransfer> transfers, TargetStrategy targetStrategy)
         {
             IEnumerable<Region> targetRegions = new List<Region>();
 
@@ -131,9 +131,9 @@ namespace WarlightAI.Helpers
                     targetRegions = superRegion
                         .ChildRegions
                         .OccupiedBy(PlayerType.Neutral)
-                        .OrderRegions(allSuperRegions, OrderStrategy.InternalFirst)
-                        .ThenOrderRegions(allSuperRegions, OrderStrategy.NeutralNeighboursFirst)
-                        .ThenOrderRegions(allSuperRegions, OrderStrategy.MostArmiesNearby);
+                        .OrderRegions(OrderStrategy.InternalFirst)
+                        .ThenOrderRegions(OrderStrategy.NeutralNeighboursFirst)
+                        .ThenOrderRegions(OrderStrategy.MostArmiesNearby);
 
                     break;
 
@@ -155,9 +155,9 @@ namespace WarlightAI.Helpers
                         .SelectMany(region => region.Neighbours.Where(neighbour => neighbour.IsOccupiedBy(PlayerType.Neutral) && neighbour.SuperRegion != superRegion));
 
                     targetRegions = internalRegions.Concat(externalRegions)
-                        .OrderRegions(allSuperRegions, OrderStrategy.InternalFirst)
-                        .ThenOrderRegions(allSuperRegions, OrderStrategy.NeutralNeighboursFirst)
-                        .ThenOrderRegions(allSuperRegions, OrderStrategy.MostArmiesNearby);
+                        .OrderRegions(OrderStrategy.InternalFirst)
+                        .ThenOrderRegions(OrderStrategy.NeutralNeighboursFirst)
+                        .ThenOrderRegions(OrderStrategy.MostArmiesNearby);
 
                     break;
 
@@ -168,7 +168,7 @@ namespace WarlightAI.Helpers
                     targetRegions = superRegion
                         .InvasionPaths
                         .OccupiedBy(PlayerType.Neutral)
-                        .OrderRegions(allSuperRegions, OrderStrategy.MostArmiesNearby);
+                        .OrderRegions(OrderStrategy.MostArmiesNearby);
 
                     break;
 
@@ -189,6 +189,40 @@ namespace WarlightAI.Helpers
             return targetRegions;
         }
 
+        /// <summary>
+        /// Gets the primary region.
+        /// </summary>
+        /// <param name="regions">The regions.</param>
+        /// <returns></returns>
+        public static Region GetPrimaryRegion(Regions regions)
+        {
+            return regions
+                .Find(PlayerType.Me)
+                .NotEnclosedBy(PlayerType.Me)
+                .Where(region => region.NbrOfArmies < 100)
+                .OrderRegions(OrderStrategy.EnemyNeighboursFirst)
+                .ThenOrderRegions(OrderStrategy.NeutralNeighboursFirst)
+                .ThenOrderRegions(OrderStrategy.NeutralNeighboursOnOtherSuperRegionsFirst)
+                .ThenOrderRegions(OrderStrategy.SmallSuperRegionsFirst)
+                .ThenOrderRegions(OrderStrategy.NumberOfArmies)
+                .FirstOrDefault();
+        }
+
+        public static Region GetSecundaryRegion(Regions regions, Region primaryRegion)
+        {
+            return regions
+                .Find(PlayerType.Me)
+                .NotEnclosedBy(PlayerType.Me)
+                .OnOtherSuperRegion(primaryRegion)
+                .Where(region => region.NbrOfArmies < 100)
+                .OrderRegions(OrderStrategy.EnemyNeighboursFirst)
+                .ThenOrderRegions(OrderStrategy.NeutralNeighboursFirst)
+                .ThenOrderRegions(OrderStrategy.NeutralNeighboursOnOtherSuperRegionsFirst)
+                .ThenOrderRegions(OrderStrategy.SmallSuperRegionsFirst)
+                .ThenOrderRegions(OrderStrategy.NumberOfArmies)
+                .FirstOrDefault();
+        }
+        
         /// <summary>
         /// Gets the stuck armies.
         /// </summary>
@@ -222,26 +256,18 @@ namespace WarlightAI.Helpers
                                 .Where(neighbor => neighbor.NbrOfArmies > region.NbrOfArmies * 2)
                                 .Select(reg => reg.NbrOfArmies).Sum()
                         );
-            }
-        }
-
-        private static IOrderedEnumerable<Region> OrderRegions(this IEnumerable<Region> regions, SuperRegions allSuperRegions, OrderStrategy orderStrategy)
-        {
-            switch (orderStrategy)
-            {
-                default:
-                case OrderStrategy.NumberOfArmies:
-                    return regions.OrderBy(region => region.NbrOfArmies);
                 case OrderStrategy.InternalFirst:
-                    return regions.OrderBy(region => region.Neighbours.Any(neighbor => allSuperRegions.Get(neighbor) != allSuperRegions.Get(region)) ? 1 : 0);
+                    return regions.OrderBy(region => region.Neighbours.Any(neighbor => neighbor.SuperRegion != region.SuperRegion) ? 1 : 0);
                 case OrderStrategy.NeutralNeighboursFirst:
-                    return regions.OrderByDescending(region => region.Neighbours.Any(neighbor => neighbor.IsOccupiedBy(PlayerType.Neutral) && allSuperRegions.Get(neighbor) == allSuperRegions.Get(region)) ? 1 : 0);
+                    return regions.OrderByDescending(region => region.Neighbours.Any(neighbor => neighbor.IsOccupiedBy(PlayerType.Neutral) && neighbor.SuperRegion == region.SuperRegion) ? 1 : 0);
+                case OrderStrategy.EnemyNeighboursFirst:
+                    return regions.OrderByDescending(region => region.Neighbours.Count(neighbor => neighbor.IsOccupiedBy(PlayerType.Opponent)));
                 case OrderStrategy.MostArmiesNearby:
                     return regions.OrderByDescending(region => region.Neighbours.Where(neighbour => neighbour.IsOccupiedBy(PlayerType.Me)).Select(reg => reg.NbrOfArmies).Sum());
             }
         }
 
-        private static IOrderedEnumerable<Region> ThenOrderRegions(this IOrderedEnumerable<Region> regions, SuperRegions allSuperRegions, OrderStrategy orderStrategy)
+        private static IOrderedEnumerable<Region> ThenOrderRegions(this IOrderedEnumerable<Region> regions, OrderStrategy orderStrategy)
         {
             switch (orderStrategy)
             {
@@ -249,8 +275,14 @@ namespace WarlightAI.Helpers
                     return regions;
                 case OrderStrategy.NumberOfArmies:
                     return regions.ThenByDescending(region => region.NbrOfArmies);
+                case OrderStrategy.SmallSuperRegionsFirst:
+                    return regions.ThenBy(region => (region.SuperRegion.ChildRegions.OccupiedBy(PlayerType.Me).Count()));
                 case OrderStrategy.NeutralNeighboursFirst:
-                    return regions.ThenByDescending(region => region.Neighbours.Any(neighbor => neighbor.IsOccupiedBy(PlayerType.Neutral) && allSuperRegions.Get(neighbor) == allSuperRegions.Get(region)) ? 1 : 0);
+                    return regions.ThenByDescending(region => region.Neighbours.Any(neighbor => neighbor.IsOccupiedBy(PlayerType.Neutral) && neighbor.SuperRegion == region.SuperRegion) ? 1 : 0);
+                case OrderStrategy.NeutralNeighboursOnOtherSuperRegionsFirst:
+                    return regions.ThenByDescending(region => region.Neighbours.Any(neighbor => neighbor.IsOccupiedBy(PlayerType.Neutral) && neighbor.SuperRegion != region.SuperRegion) ? 1 : 0);
+                case OrderStrategy.EnemyNeighboursFirst:
+                    return regions.ThenByDescending(region => region.Neighbours.Count(neighbor => neighbor.IsOccupiedBy(PlayerType.Opponent)));
                 case OrderStrategy.MostArmiesNearby:
                     return regions.ThenByDescending(region => region.Neighbours.Where(neighbour => neighbour.IsOccupiedBy(PlayerType.Me)).Select(reg => reg.NbrOfArmies).Sum());
             }

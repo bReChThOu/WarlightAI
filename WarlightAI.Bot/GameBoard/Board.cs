@@ -152,14 +152,14 @@ namespace WarlightAI.GameBoard
                 .ChildRegions
                 .SelectMany(region => region
                                     .Neighbours
-                                    .Where(neighbor => SuperRegions.Get(neighbor).ID != superregion.ID));
+                                    .Where(neighbor => neighbor.SuperRegion.ID != superregion.ID));
 
 
             var borderTerritories = superregion
                .ChildRegions
                 .Where(region => region
                                     .Neighbours
-                                    .Any(neighbor => SuperRegions.Get(neighbor).ID != superregion.ID));
+                                    .Any(neighbor => neighbor.SuperRegion.ID != superregion.ID));
 
             superregion.InvasionPaths = invasionPaths;
             superregion.BorderTerritories = borderTerritories;
@@ -213,7 +213,7 @@ namespace WarlightAI.GameBoard
              * */
             var startingRegion = Regions
                 .Where(region => region.RegionStatus == RegionStatus.PossibleStartingRegion)
-                .OrderByDescending(region => SuperRegions.Get(region).Priority)
+                .OrderByDescending(region => region.SuperRegion.Priority)
                 .First();
 
             startingRegion.RegionStatus = RegionStatus.StartingRegion;
@@ -290,7 +290,7 @@ namespace WarlightAI.GameBoard
                 int opponentTotalSuperRegions =
                     Regions
                     .Find(PlayerType.Opponent)
-                    .GroupBy(region => SuperRegions.Get(region).ID)
+                    .GroupBy(region => region.SuperRegion.ID)
                     .Count();
 
                 if (myTotalSuperRegions.Count() == 3 && opponentTotalSuperRegions == 3)
@@ -322,117 +322,43 @@ namespace WarlightAI.GameBoard
 
             }
 
-            var primaryRegion = Regions
-                .Find(PlayerType.Me)
-                .NotEnclosedBy(PlayerType.Me)
-                .Where(region => region.NbrOfArmies < 100)
-                .OrderByDescending(region => region.Neighbours.Count(neighbor => neighbor.IsOccupiedBy(PlayerType.Opponent)))
-                .ThenByDescending(region => region.Neighbours.Count(neighbor => neighbor.IsOccupiedBy(PlayerType.Neutral) && SuperRegions.Get(neighbor) == SuperRegions.Get(region)) > 0 ? 1 : 0)
-                .ThenBy(region => region.Neighbours.Count(neighbor => neighbor.IsOccupiedBy(PlayerType.Neutral) && SuperRegions.Get(neighbor) != SuperRegions.Get(region)) > 0 ? 1 : 0)
-                .ThenBy(region => (SuperRegions.Get(region).ChildRegions.Count(child => child.Player.PlayerType == PlayerType.Me)))
-                .ThenByDescending(region => region.NbrOfArmies)
-                .FirstOrDefault();
+            var primaryRegion = StrategyManager.GetPrimaryRegion(Regions);
+            var secundaryRegion = StrategyManager.GetSecundaryRegion(Regions, primaryRegion);
+
+            int primaryRegionArmies = 0;
+            int secundaryRegionArmies = 0;
 
             if (startingArmies <= 6)
             {
-                var secundaryRegion = Regions
-                   .Find(PlayerType.Me)
-                   .NotEnclosedBy(PlayerType.Me)
-                   .Where(region => SuperRegions.Get(region) != SuperRegions.Get(primaryRegion))
-                   .Where(region => region.NbrOfArmies < 100)
-                   .OrderByDescending(region => region.Neighbours.Count(neighbor => neighbor.IsOccupiedBy(PlayerType.Opponent)))
-                   .ThenByDescending(region => region.Neighbours.Count(neighbor => neighbor.IsOccupiedBy(PlayerType.Neutral) && SuperRegions.Get(neighbor) == SuperRegions.Get(region)) > 0 ? 1 : 0)
-                   .ThenBy(region => region.Neighbours.Count(neighbor => neighbor.IsOccupiedBy(PlayerType.Neutral) && SuperRegions.Get(neighbor) != SuperRegions.Get(region)) > 0 ? 1 : 0)
-                   .ThenBy(region => (SuperRegions.Get(region).ChildRegions.Count(child => child.Player.PlayerType == PlayerType.Me)))
-                   .ThenByDescending(region => region.NbrOfArmies)
-                   .FirstOrDefault();
-
-                var armyplacement = new ArmyPlacement { Armies = 3, Region = primaryRegion };
-                placements.Add(armyplacement);
-
-                if (secundaryRegion == null)
-                {
-                    secundaryRegion = primaryRegion;
-                }
-
-                armyplacement = new ArmyPlacement { Armies = startingArmies - 3, Region = secundaryRegion };
-                placements.Add(armyplacement);
+                primaryRegionArmies = 3;
+                secundaryRegionArmies = startingArmies - 3;
             }
             if (startingArmies >= 7 && startingArmies <= 9)
             {
-                var secundaryRegion = Regions
-                   .Find(PlayerType.Me)
-                   .NotEnclosedBy(PlayerType.Me)
-                   .Where(region => SuperRegions.Get(region) != SuperRegions.Get(primaryRegion))
-                   .Where(region => region.NbrOfArmies < 100)
-                   .OrderByDescending(region => region.Neighbours.Count(neighbor => neighbor.IsOccupiedBy(PlayerType.Opponent)))
-                   .ThenByDescending(region => region.Neighbours.Count(neighbor => neighbor.IsOccupiedBy(PlayerType.Neutral) && SuperRegions.Get(neighbor) == SuperRegions.Get(region)) > 0 ? 1 : 0)
-                   .ThenBy(region => region.Neighbours.Count(neighbor => neighbor.IsOccupiedBy(PlayerType.Neutral) && SuperRegions.Get(neighbor) != SuperRegions.Get(region)) > 0 ? 1 : 0)
-                   .ThenBy(region => (SuperRegions.Get(region).ChildRegions.Count(child => child.Player.PlayerType == PlayerType.Me)))
-                   .ThenByDescending(region => region.NbrOfArmies)
-                   .FirstOrDefault();
-
-                var armyplacement = new ArmyPlacement { Armies = 5, Region = primaryRegion };
-                placements.Add(armyplacement);
-
-                if (secundaryRegion == null)
-                {
-                    secundaryRegion = primaryRegion;
-                }
-
-                armyplacement = new ArmyPlacement { Armies = startingArmies - 5, Region = secundaryRegion };
-                placements.Add(armyplacement);
+                primaryRegionArmies = 5;
+                secundaryRegionArmies = startingArmies - 5;
             }
             if (startingArmies > 9 && startingArmies <= 18)
             {
-                var secundaryRegion = Regions
-                   .Find(PlayerType.Me)
-                   .NotEnclosedBy(PlayerType.Me)
-                   .Where(region => SuperRegions.Get(region) != SuperRegions.Get(primaryRegion))
-                   .Where(region => region.NbrOfArmies < 100)
-                   .OrderByDescending(region => region.Neighbours.Count(neighbor => neighbor.IsOccupiedBy(PlayerType.Opponent)))
-                   .ThenByDescending(region => region.Neighbours.Count(neighbor => neighbor.IsOccupiedBy(PlayerType.Neutral) && SuperRegions.Get(neighbor) == SuperRegions.Get(region)) > 0 ? 1 : 0)
-                   .ThenBy(region => region.Neighbours.Count(neighbor => neighbor.IsOccupiedBy(PlayerType.Neutral) && SuperRegions.Get(neighbor) != SuperRegions.Get(region)) > 0 ? 1 : 0)
-                   .ThenByDescending(region => (SuperRegions.Get(region).ChildRegions.Count(child => child.Player.PlayerType == PlayerType.Me)))
-                   .ThenByDescending(region => region.NbrOfArmies)
-                   .FirstOrDefault();
-
-                var armyplacement = new ArmyPlacement { Armies = 9, Region = primaryRegion };
-                placements.Add(armyplacement);
-
-                if (secundaryRegion == null)
-                {
-                    secundaryRegion = primaryRegion;
-                }
-
-                armyplacement = new ArmyPlacement { Armies = startingArmies - 9, Region = secundaryRegion };
-                placements.Add(armyplacement);
+                primaryRegionArmies = 9;
+                secundaryRegionArmies = startingArmies - 9;
             }
             if (startingArmies > 18)
             {
-                var secundaryRegion = Regions
-                   .Find(PlayerType.Me)
-                   .NotEnclosedBy(PlayerType.Me)
-                   .Where(region => SuperRegions.Get(region) != SuperRegions.Get(primaryRegion))
-                   .Where(region => region.NbrOfArmies < 100)
-                   .OrderByDescending(region => region.Neighbours.Count(neighbor => neighbor.IsOccupiedBy(PlayerType.Opponent)))
-                   .ThenByDescending(region => region.Neighbours.Count(neighbor => neighbor.IsOccupiedBy(PlayerType.Neutral) && SuperRegions.Get(neighbor) == SuperRegions.Get(region)) > 0 ? 1 : 0)
-                   .ThenBy(region => region.Neighbours.Count(neighbor => neighbor.IsOccupiedBy(PlayerType.Neutral) && SuperRegions.Get(neighbor) != SuperRegions.Get(region)) > 0 ? 1 : 0)
-                   .ThenBy(region => (SuperRegions.Get(region).ChildRegions.Count(child => child.Player.PlayerType == PlayerType.Me)))
-                   .ThenByDescending(region => region.NbrOfArmies)
-                   .FirstOrDefault();
-
-                var armyplacement = new ArmyPlacement { Armies = startingArmies - 9, Region = primaryRegion };
-                placements.Add(armyplacement);
-
-                if (secundaryRegion == null)
-                {
-                    secundaryRegion = primaryRegion;
-                }
-
-                armyplacement = new ArmyPlacement { Armies = 9, Region = secundaryRegion };
-                placements.Add(armyplacement);
+                primaryRegionArmies = startingArmies - 9;
+                secundaryRegionArmies = 9;
             }
+
+            var armyplacement = new ArmyPlacement { Armies = primaryRegionArmies, Region = primaryRegion };
+            placements.Add(armyplacement);
+
+            if (secundaryRegion == null)
+            {
+                secundaryRegion = primaryRegion;
+            }
+
+            armyplacement = new ArmyPlacement { Armies = secundaryRegionArmies, Region = secundaryRegion };
+            placements.Add(armyplacement);
 
             UpdateRegions(placements);
             return placements;
@@ -477,7 +403,7 @@ namespace WarlightAI.GameBoard
         /// <param name="superRegion">The super region.</param>
         public void CalculateTransfers(SuperRegion superRegion)
         {
-            bool skipSuperRegion = StrategyCalculator.SkipSuperRegion(superRegion);
+            bool skipSuperRegion = StrategyManager.SkipSuperRegion(superRegion);
 
             if (skipSuperRegion)
             {
@@ -486,8 +412,8 @@ namespace WarlightAI.GameBoard
 
             bool transferDone = false;
 
-            bool borderTerritoriesWithEnemyArmies = StrategyCalculator.EnemyBorderTerritories(superRegion, SuperRegions);
-            bool regionsWithEnemyArmies = StrategyCalculator.EnemyRegions(superRegion);
+            bool borderTerritoriesWithEnemyArmies = StrategyManager.EnemyBorderTerritories(superRegion, SuperRegions);
+            bool regionsWithEnemyArmies = StrategyManager.EnemyRegions(superRegion);
 
             if (!borderTerritoriesWithEnemyArmies && !regionsWithEnemyArmies)
             {
@@ -504,7 +430,7 @@ namespace WarlightAI.GameBoard
                 transferDone = CalculateForEnemyRegions(superRegion);
             }
 
-            var stuckArmies = StrategyCalculator.GetStuckArmies(superRegion, Transfers);
+            var stuckArmies = StrategyManager.GetStuckArmies(superRegion, Transfers);
             CalculateForStuckArmies(stuckArmies);
         }
 
@@ -518,32 +444,32 @@ namespace WarlightAI.GameBoard
             Region targetRegion = null, sourceRegion = null;
             bool transferDone = false;
 
-            var targetRegions = StrategyCalculator.GetTargetRegions(superRegion, SuperRegions, Transfers, TargetStrategy.ConquerAll);
+            var targetRegions = StrategyManager.GetTargetRegions(superRegion, Transfers, TargetStrategy.ConquerAll);
 
             /* No neutral armies found in this super region, that should mean we own the continent.
              * Let's explore the world and go to a new super region
              * */
             if (targetRegions.None())
             {
-                targetRegions = StrategyCalculator.GetTargetRegions(superRegion, SuperRegions, Transfers, TargetStrategy.ConquerOtherSuperRegions);
+                targetRegions = StrategyManager.GetTargetRegions(superRegion, Transfers, TargetStrategy.ConquerOtherSuperRegions);
 
                 if (targetRegions.Any())
                 {
                     //We'll want to make more than 1 move
                     foreach (var cTargetRegion in targetRegions)
                     {
-                        sourceRegion = StrategyCalculator.GetSourceRegion(cTargetRegion, Transfers, SourceStrategy.DominateOtherSuperRegions);
+                        sourceRegion = StrategyManager.GetSourceRegion(cTargetRegion, Transfers, SourceStrategy.DominateOtherSuperRegions);
                         transferDone = AddCurrentPairToTransferList(sourceRegion, cTargetRegion);
                     }
                 }
                 else
                 {
-                    targetRegions = StrategyCalculator.GetTargetRegions(superRegion, SuperRegions, Transfers, TargetStrategy.EnemyInvasionPaths);
+                    targetRegions = StrategyManager.GetTargetRegions(superRegion, Transfers, TargetStrategy.EnemyInvasionPaths);
                     targetRegion = targetRegions.FirstOrDefault();
 
                     if (targetRegion != null)
                     {
-                        sourceRegion = StrategyCalculator.GetSourceRegion(targetRegion, Transfers, SourceStrategy.AttackEnemyInvasionPath);
+                        sourceRegion = StrategyManager.GetSourceRegion(targetRegion, Transfers, SourceStrategy.AttackEnemyInvasionPath);
                         transferDone = AddCurrentPairToTransferList(sourceRegion, targetRegion);
                     }
                 }
@@ -557,7 +483,7 @@ namespace WarlightAI.GameBoard
                 {
                     var cTargetRegion = targetRegions.Skip(i).First();
 
-                    sourceRegion = StrategyCalculator.GetSourceRegion(cTargetRegion, Transfers, SourceStrategy.DominateCurrentSuperRegion);
+                    sourceRegion = StrategyManager.GetSourceRegion(cTargetRegion, Transfers, SourceStrategy.DominateCurrentSuperRegion);
                     if (sourceRegion != null)
                     {
                         //We can conquer multiple neutral regions with one army.
@@ -608,7 +534,7 @@ namespace WarlightAI.GameBoard
             Region targetRegion = null, sourceRegion = null;
             bool transferDone = false;
 
-            var invadingBorderTerritories = StrategyCalculator.GetTargetRegions(superRegion, SuperRegions, Transfers, TargetStrategy.EnemyInvasionPaths);
+            var invadingBorderTerritories = StrategyManager.GetTargetRegions(superRegion, Transfers, TargetStrategy.EnemyInvasionPaths);
             var invadingBorderTerritory = invadingBorderTerritories.FirstOrDefault();
 
             /*
@@ -658,7 +584,7 @@ namespace WarlightAI.GameBoard
                     targetRegion = invadingBorderTerritory
                         .Neighbours
                         .Find(PlayerType.Me)
-                        .Where(region => SuperRegions.Get(region) == superRegion)
+                        .Where(region => region.SuperRegion == superRegion)
                         .OrderBy(region => region.NbrOfArmies)
                         .FirstOrDefault();
 
@@ -679,8 +605,8 @@ namespace WarlightAI.GameBoard
                 var targetRegions = superRegion
                     .ChildRegions
                     .Where(region => region.IsOccupiedBy(PlayerType.Neutral))
-                    .OrderBy(region => region.Neighbours.Count(neighbor => SuperRegions.Get(neighbor) != SuperRegions.Get(region)) > 0 ? 1 : 0)
-                    .ThenByDescending(region => region.Neighbours.Count(neighbor => neighbor.IsOccupiedBy(PlayerType.Neutral) && SuperRegions.Get(neighbor) == SuperRegions.Get(region)) > 0 ? 1 : 0)
+                    .OrderBy(region => region.Neighbours.Count(neighbor => neighbor.SuperRegion != region.SuperRegion) > 0 ? 1 : 0)
+                    .ThenByDescending(region => region.Neighbours.Count(neighbor => neighbor.IsOccupiedBy(PlayerType.Neutral) && neighbor.SuperRegion == region.SuperRegion) > 0 ? 1 : 0)
                     .ThenByDescending(region =>
                         region.Neighbours.Where(neighbour => neighbour.IsOccupiedBy(PlayerType.Me)).Select(reg => reg.NbrOfArmies).Sum()
                     );
@@ -690,7 +616,7 @@ namespace WarlightAI.GameBoard
                 {
                     sourceRegion = cTargetRegion
                     .Neighbours
-                    .Where(region => SuperRegions.Get(region) == superRegion)
+                    .Where(region => region.SuperRegion == superRegion)
                     .Where(region => region.IsOccupiedBy(PlayerType.Me) && region.NbrOfArmies >= cTargetRegion.NbrOfArmies * 2 + 1)
                     .Where(region => Transfers.Count(t => t.SourceRegion.ID == region.ID) == 0)
                     .OrderByDescending(region => region.NbrOfArmies)
@@ -769,7 +695,7 @@ namespace WarlightAI.GameBoard
                         targetRegion = hostileRegion
                             .Neighbours
                             .Find(PlayerType.Me)
-                            .Where(region => SuperRegions.Get(region) == superRegion)
+                            .Where(region => region.SuperRegion == superRegion)
                             .OrderBy(region => region.NbrOfArmies)
                             .FirstOrDefault();
 
@@ -792,7 +718,7 @@ namespace WarlightAI.GameBoard
                                     region =>
                                         region.Neighbours.Count(
                                             neighbor =>
-                                                SuperRegions.Get(neighbor) != SuperRegions.Get(region)) > 0
+                                                neighbor.SuperRegion != region.SuperRegion) > 0
                                             ? 1
                                             : 0)
                                 .ThenByDescending(
@@ -800,7 +726,7 @@ namespace WarlightAI.GameBoard
                                         region.Neighbours.Count(
                                             neighbor =>
                                                 neighbor.IsOccupiedBy(PlayerType.Neutral) &&
-                                                SuperRegions.Get(neighbor) == SuperRegions.Get(region)) > 0
+                                                neighbor.SuperRegion == region.SuperRegion) > 0
                                             ? 1
                                             : 0)
                                 .ThenByDescending(region =>
@@ -814,7 +740,7 @@ namespace WarlightAI.GameBoard
                             {
                                 sourceRegion = cTargetRegion
                                     .Neighbours
-                                    .Where(region => SuperRegions.Get(region) == superRegion)
+                                    .Where(region => region.SuperRegion == superRegion)
                                     .Where(
                                         region =>
                                             region.IsOccupiedBy(PlayerType.Me) && region.NbrOfArmies > 5)
@@ -843,8 +769,8 @@ namespace WarlightAI.GameBoard
                 var targetRegions = superRegion
                 .ChildRegions
                 .Where(region => region.IsOccupiedBy(PlayerType.Neutral))
-                .OrderBy(region => region.Neighbours.Count(neighbor => SuperRegions.Get(neighbor) != SuperRegions.Get(region)) > 0 ? 1 : 0)
-                .ThenByDescending(region => region.Neighbours.Count(neighbor => neighbor.IsOccupiedBy(PlayerType.Neutral) && SuperRegions.Get(neighbor) == SuperRegions.Get(region)) > 0 ? 1 : 0)
+                .OrderBy(region => region.Neighbours.Count(neighbor => neighbor.SuperRegion != region.SuperRegion) > 0 ? 1 : 0)
+                .ThenByDescending(region => region.Neighbours.Count(neighbor => neighbor.IsOccupiedBy(PlayerType.Neutral) && neighbor.SuperRegion == region.SuperRegion) > 0 ? 1 : 0)
                 .ThenByDescending(region =>
                     region.Neighbours.Where(neighbour => neighbour.IsOccupiedBy(PlayerType.Me)).Select(reg => reg.NbrOfArmies).Sum()
                 );
@@ -854,7 +780,7 @@ namespace WarlightAI.GameBoard
                     var cTargetRegion = targetRegions.ToArray()[i];
                     sourceRegion = cTargetRegion
                     .Neighbours
-                    .Where(region => SuperRegions.Get(region) == superRegion)
+                    .Where(region => region.SuperRegion == superRegion)
                     .Where(region => region.IsOccupiedBy(PlayerType.Me) && region.NbrOfArmies > 5)
                     .Where(region => Transfers.Count(t => t.SourceRegion.ID == region.ID) == 0)
                     .OrderByDescending(region => region.NbrOfArmies)

@@ -45,7 +45,7 @@
     <Compile Include="GameBoard\Configuration.cs" />
     <Compile Include="GameBoard\GameSettings.cs" />
     <Compile Include="Helpers\ExtensionMethods.cs" />
-    <Compile Include="Helpers\StrategyCalculator.cs" />
+    <Compile Include="Helpers\StrategyManager.cs" />
     <Compile Include="Model\OrderStrategy.cs" />
     <Compile Include="Model\Player.cs" />
     <Compile Include="Model\PlayerType.cs" />
