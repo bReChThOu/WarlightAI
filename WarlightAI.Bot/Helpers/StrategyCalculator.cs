@@ -213,7 +213,7 @@ namespace WarlightAI.Helpers
             {
                 default:
                 case OrderStrategy.NumberOfArmies:
-                    return regions.OrderBy(region => region.NbrOfArmies);
+                    return regions.OrderByDescending(region => region.NbrOfArmies);
                 case OrderStrategy.MostQualifiedArmiesNearby:
                     return regions.OrderByDescending(region =>
                             region.Neighbours

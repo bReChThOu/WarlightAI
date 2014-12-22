@@ -284,7 +284,7 @@ namespace WarlightAI.GameBoard
                 var myTotalSuperRegions =
                     Regions
                     .Find(PlayerType.Me)
-                    .GroupBy(region => SuperRegions.Get(region).ID)
+                    .GroupBy(region => region.SuperRegion)
                     .ToList(); // Prevent possible multiple enumerations
 
                 int opponentTotalSuperRegions =
@@ -299,19 +299,19 @@ namespace WarlightAI.GameBoard
                     placements.Add(new ArmyPlacement
                     {
                         Armies = 2, 
-                        Region = Regions.Find(PlayerType.Me).First(r => SuperRegions.Get(r).ID == myTotalSuperRegions.First().Key)
+                        Region = Regions.Find(PlayerType.Me).First(r => r.SuperRegion == myTotalSuperRegions.First().Key)
                     });
 
                     placements.Add(new ArmyPlacement
                     {
-                        Armies = 2, 
-                        Region = Regions.Find(PlayerType.Me).First(r => SuperRegions.Get(r).ID == myTotalSuperRegions.Skip(1).First().Key)
+                        Armies = 2,
+                        Region = Regions.Find(PlayerType.Me).First(r => r.SuperRegion == myTotalSuperRegions.Skip(1).First().Key)
                     });
 
                     placements.Add(new ArmyPlacement
                     {
-                        Armies = 1, 
-                        Region = Regions.Find(PlayerType.Me).First(r => SuperRegions.Get(r).ID == myTotalSuperRegions.Skip(2).First().Key)
+                        Armies = 1,
+                        Region = Regions.Find(PlayerType.Me).First(r => r.SuperRegion == myTotalSuperRegions.Skip(2).First().Key)
                     });
 
                     UpdateRegions(placements);
@@ -324,7 +324,7 @@ namespace WarlightAI.GameBoard
 
             var primaryRegion = Regions
                 .Find(PlayerType.Me)
-                .Where(region => !region.AllNeighboursAreOccupiedBy(PlayerType.Me))
+                .NotEnclosedBy(PlayerType.Me)
                 .Where(region => region.NbrOfArmies < 100)
                 .OrderByDescending(region => region.Neighbours.Count(neighbor => neighbor.IsOccupiedBy(PlayerType.Opponent)))
                 .ThenByDescending(region => region.Neighbours.Count(neighbor => neighbor.IsOccupiedBy(PlayerType.Neutral) && SuperRegions.Get(neighbor) == SuperRegions.Get(region)) > 0 ? 1 : 0)
@@ -337,6 +337,7 @@ namespace WarlightAI.GameBoard
             {
                 var secundaryRegion = Regions
                    .Find(PlayerType.Me)
+                   .NotEnclosedBy(PlayerType.Me)
                    .Where(region => SuperRegions.Get(region) != SuperRegions.Get(primaryRegion))
                    .Where(region => region.NbrOfArmies < 100)
                    .OrderByDescending(region => region.Neighbours.Count(neighbor => neighbor.IsOccupiedBy(PlayerType.Opponent)))
@@ -361,6 +362,7 @@ namespace WarlightAI.GameBoard
             {
                 var secundaryRegion = Regions
                    .Find(PlayerType.Me)
+                   .NotEnclosedBy(PlayerType.Me)
                    .Where(region => SuperRegions.Get(region) != SuperRegions.Get(primaryRegion))
                    .Where(region => region.NbrOfArmies < 100)
                    .OrderByDescending(region => region.Neighbours.Count(neighbor => neighbor.IsOccupiedBy(PlayerType.Opponent)))
@@ -385,6 +387,7 @@ namespace WarlightAI.GameBoard
             {
                 var secundaryRegion = Regions
                    .Find(PlayerType.Me)
+                   .NotEnclosedBy(PlayerType.Me)
                    .Where(region => SuperRegions.Get(region) != SuperRegions.Get(primaryRegion))
                    .Where(region => region.NbrOfArmies < 100)
                    .OrderByDescending(region => region.Neighbours.Count(neighbor => neighbor.IsOccupiedBy(PlayerType.Opponent)))
@@ -409,6 +412,7 @@ namespace WarlightAI.GameBoard
             {
                 var secundaryRegion = Regions
                    .Find(PlayerType.Me)
+                   .NotEnclosedBy(PlayerType.Me)
                    .Where(region => SuperRegions.Get(region) != SuperRegions.Get(primaryRegion))
                    .Where(region => region.NbrOfArmies < 100)
                    .OrderByDescending(region => region.Neighbours.Count(neighbor => neighbor.IsOccupiedBy(PlayerType.Opponent)))
@@ -576,7 +580,15 @@ namespace WarlightAI.GameBoard
                         {
                             if (sourceRegion.NbrOfArmies >= cTargetRegion.NbrOfArmies * 2 + 1)
                             {
-                                transferDone = AddCurrentPairToTransferList(sourceRegion, cTargetRegion, cTargetRegion.NbrOfArmies * 2);
+                                var nbrOfArmies = cTargetRegion.NbrOfArmies * 2 * 2;
+
+                                //If we're enclosed by ourself, attack with everything
+                                if (sourceRegion.Neighbours.Count(n => n.IsOccupiedBy(PlayerType.Me)) == sourceRegion.Neighbours.Count - 1)
+                                {
+                                    nbrOfArmies = sourceRegion.NbrOfArmies - 1;
+                                }
+
+                                transferDone = AddCurrentPairToTransferList(sourceRegion, cTargetRegion, nbrOfArmies);
                             }
                         }
                     }
@@ -737,7 +749,15 @@ namespace WarlightAI.GameBoard
                         targetRegion = hostileRegion;
                         sourceRegion = possibleAttackingRegion;
 
-                        transferDone = transferDone || AddCurrentPairToTransferList(sourceRegion, targetRegion, enemyArmies * 2);
+                        var nbrOfArmies = enemyArmies * 2;
+
+                        //If we're enclosed by ourself, attack with everything
+                        if (sourceRegion.Neighbours.Count(n => n.IsOccupiedBy(PlayerType.Me)) == sourceRegion.Neighbours.Count - 1)
+                        {
+                            nbrOfArmies = sourceRegion.NbrOfArmies - 1;
+                        }
+
+                        transferDone = transferDone || AddCurrentPairToTransferList(sourceRegion, targetRegion, nbrOfArmies);
                     }
 
                     /* We can't attack, so let's defend.
