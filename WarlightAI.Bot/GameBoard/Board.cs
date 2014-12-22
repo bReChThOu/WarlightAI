@@ -755,7 +755,7 @@ namespace WarlightAI.GameBoard
         /// Armies that are stuck serve no purpose. We need to move them away where they can be of any use.
         /// </summary>
         /// <param name="stuckArmies">The stuck armies.</param>
-        public void CalculateForStuckArmies(List<Region> stuckArmies)
+        public void CalculateForStuckArmies(IEnumerable<Region> stuckArmies)
         {
             if (stuckArmies.Any())
             {

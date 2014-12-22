@@ -241,7 +241,7 @@ namespace WarlightAI.Helpers
         /// <param name="superRegion">The super region.</param>
         /// <param name="transfers">The transfers.</param>
         /// <returns></returns>
-        public static List<Region> GetStuckArmies(SuperRegion superRegion, IEnumerable<ArmyTransfer> transfers)
+        public static IEnumerable<Region> GetStuckArmies(SuperRegion superRegion, IEnumerable<ArmyTransfer> transfers)
         {
             return superRegion
                 .ChildRegions
@@ -249,8 +249,7 @@ namespace WarlightAI.Helpers
                 .NoSourceYet(transfers)
                 .NoTargetYet(transfers)
                 .CanBeUsedForTransfer()
-                .AllNeighboursOccupiedBy(PlayerType.Me)
-                .ToList();
+                .AllNeighboursOccupiedBy(PlayerType.Me);
         }
 
         private static IOrderedEnumerable<Region> OrderRegions(this IEnumerable<Region> regions, OrderStrategy orderStrategy)
