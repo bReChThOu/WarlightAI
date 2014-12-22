@@ -199,8 +199,8 @@ namespace WarlightAI.Helpers
             return regions
                 .Find(PlayerType.Me)
                 .NotEnclosedBy(PlayerType.Me)
-                .Where(region => region.NbrOfArmies < 100)
                 .OrderRegions(OrderStrategy.EnemyNeighboursFirst)
+                .ThenOrderRegions(OrderStrategy.VeryLargeRegionsLast)
                 .ThenOrderRegions(OrderStrategy.NeutralNeighboursFirst)
                 .ThenOrderRegions(OrderStrategy.NeutralNeighboursOnOtherSuperRegionsFirst)
                 .ThenOrderRegions(OrderStrategy.SmallSuperRegionsFirst)
@@ -275,6 +275,8 @@ namespace WarlightAI.Helpers
                     return regions;
                 case OrderStrategy.NumberOfArmies:
                     return regions.ThenByDescending(region => region.NbrOfArmies);
+                case OrderStrategy.VeryLargeRegionsLast:
+                    return regions.ThenByDescending(region => region.NbrOfArmies < 100 ? 1 : 0);
                 case OrderStrategy.SmallSuperRegionsFirst:
                     return regions.ThenBy(region => (region.SuperRegion.ChildRegions.OccupiedBy(PlayerType.Me).Count()));
                 case OrderStrategy.NeutralNeighboursFirst:

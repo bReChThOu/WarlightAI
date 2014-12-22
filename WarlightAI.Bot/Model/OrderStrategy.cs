@@ -22,6 +22,11 @@ namespace WarlightAI.Model
         NeutralNeighboursFirst,
 
         /// <summary>
+        /// Regions that are very large (i.e. 100+ armies) come last
+        /// </summary>
+        VeryLargeRegionsLast,
+
+        /// <summary>
         /// Regions that have neutral neighbours in other super regions come first
         /// </summary>
         NeutralNeighboursOnOtherSuperRegionsFirst,
