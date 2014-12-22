@@ -81,7 +81,7 @@ namespace WarlightAI.Helpers
                         .OccupiedBy(PlayerType.Me)
                         .WithMinimumThreshold()
                         .NoSourceYet(transfers)
-                        .OrderRegions(OrderStrategy.NumberOfArmies)
+                        .OrderRegions(OrderStrategy.MostNumberOfArmies)
                         .FirstOrDefault();
 
                 case SourceStrategy.DominateCurrentSuperRegion:
@@ -91,7 +91,7 @@ namespace WarlightAI.Helpers
                         .OccupiedBy(PlayerType.Me)
                         .WithMinimumThreshold()
                         .NoSourceYet(transfers)
-                        .OrderRegions(OrderStrategy.NumberOfArmies)
+                        .OrderRegions(OrderStrategy.MostNumberOfArmies)
                         .FirstOrDefault();
 
                 case SourceStrategy.AttackEnemyInvasionPath:
@@ -99,7 +99,7 @@ namespace WarlightAI.Helpers
                         .Neighbours
                         .OccupiedBy(PlayerType.Me)
                         .WithMinimumThreshold()
-                        .OrderRegions(OrderStrategy.NumberOfArmies)
+                        .OrderRegions(OrderStrategy.MostNumberOfArmies)
                         .FirstOrDefault();
             }
 
@@ -172,6 +172,18 @@ namespace WarlightAI.Helpers
 
                     break;
 
+                case TargetStrategy.HostileRegions:
+                    /*
+                     * Searches for regions in this super region that are occupied by the opponent
+                     * */
+                    targetRegions = superRegion
+                        .ChildRegions
+                        .OccupiedBy(PlayerType.Opponent)
+                        .AnyNeighboursOccupiedBy(PlayerType.Me)
+                        .OrderRegions(OrderStrategy.LeastNumberOfArmies);
+
+                    break;
+
                 case TargetStrategy.EnemyInvasionPaths:
                     /*
                      * Searches for enemy invasion paths
@@ -181,7 +193,7 @@ namespace WarlightAI.Helpers
                         .InvasionPaths
                         .OccupiedBy(PlayerType.Opponent)
                         .NoTargetYet(transfers)
-                        .OrderRegions(OrderStrategy.NumberOfArmies);
+                        .OrderRegions(OrderStrategy.MostNumberOfArmies);
 
                     break;
             }
@@ -204,7 +216,7 @@ namespace WarlightAI.Helpers
                 .ThenOrderRegions(OrderStrategy.NeutralNeighboursFirst)
                 .ThenOrderRegions(OrderStrategy.NeutralNeighboursOnOtherSuperRegionsFirst)
                 .ThenOrderRegions(OrderStrategy.SmallSuperRegionsFirst)
-                .ThenOrderRegions(OrderStrategy.NumberOfArmies)
+                .ThenOrderRegions(OrderStrategy.MostNumberOfArmies)
                 .FirstOrDefault();
         }
 
@@ -219,7 +231,7 @@ namespace WarlightAI.Helpers
                 .ThenOrderRegions(OrderStrategy.NeutralNeighboursFirst)
                 .ThenOrderRegions(OrderStrategy.NeutralNeighboursOnOtherSuperRegionsFirst)
                 .ThenOrderRegions(OrderStrategy.SmallSuperRegionsFirst)
-                .ThenOrderRegions(OrderStrategy.NumberOfArmies)
+                .ThenOrderRegions(OrderStrategy.MostNumberOfArmies)
                 .FirstOrDefault();
         }
         
@@ -246,7 +258,7 @@ namespace WarlightAI.Helpers
             switch (orderStrategy)
             {
                 default:
-                case OrderStrategy.NumberOfArmies:
+                case OrderStrategy.MostNumberOfArmies:
                     return regions.OrderByDescending(region => region.NbrOfArmies);
                 case OrderStrategy.MostQualifiedArmiesNearby:
                     return regions.OrderByDescending(region =>
@@ -273,7 +285,7 @@ namespace WarlightAI.Helpers
             {
                 default:
                     return regions;
-                case OrderStrategy.NumberOfArmies:
+                case OrderStrategy.MostNumberOfArmies:
                     return regions.ThenByDescending(region => region.NbrOfArmies);
                 case OrderStrategy.VeryLargeRegionsLast:
                     return regions.ThenByDescending(region => region.NbrOfArmies < 100 ? 1 : 0);

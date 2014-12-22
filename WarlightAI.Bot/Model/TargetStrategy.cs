@@ -31,5 +31,10 @@ namespace WarlightAI.Model
         /// </summary>
         EnemyInvasionPaths,
 
+        /// <summary>
+        /// The hostile regions strategy
+        /// </summary>
+        HostileRegions,
+
     }
 }

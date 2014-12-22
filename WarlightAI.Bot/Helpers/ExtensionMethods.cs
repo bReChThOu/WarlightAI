@@ -60,6 +60,17 @@ namespace WarlightAI.Helpers
         }
 
         /// <summary>
+        /// Returns all elements from a sequence where any the neighbours are occupied by a specified player.
+        /// </summary>
+        /// <param name="source">The source.</param>
+        /// <param name="playerType">Type of the player.</param>
+        /// <returns></returns>
+        public static IEnumerable<Region> AnyNeighboursOccupiedBy(this IEnumerable<Region> source, PlayerType playerType)
+        {
+            return source.Where(region => region.Neighbours.Any(neighbour => neighbour.IsOccupiedBy(playerType)));
+        }
+
+        /// <summary>
         /// Returns all elements from a sequence that are not enclosed by a specified player.
         /// </summary>
         /// <param name="source">The source.</param>

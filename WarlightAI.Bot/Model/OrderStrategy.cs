@@ -52,8 +52,13 @@ namespace WarlightAI.Model
         MostQualifiedArmiesNearby,
 
         /// <summary>
-        /// Regions are ordered by the number of armies
+        /// Regions are ordered descending by the number of armies
         /// </summary>
-        NumberOfArmies,
+        MostNumberOfArmies,
+
+        /// <summary>
+        /// Regions are ordered ascending by the number of armies
+        /// </summary>
+        LeastNumberOfArmies,
     }
 }

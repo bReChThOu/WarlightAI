@@ -537,19 +537,6 @@ namespace WarlightAI.GameBoard
             var invadingBorderTerritories = StrategyManager.GetTargetRegions(superRegion, Transfers, TargetStrategy.EnemyInvasionPaths);
             var invadingBorderTerritory = invadingBorderTerritories.FirstOrDefault();
 
-            /*
-             * We can't attack the biggest enemy region. Let's try another
-             * Every conquered region means the opponent might loose his super region bonus!
-             * */
-            if (invadingBorderTerritory == null)
-            {
-                invadingBorderTerritory = superRegion
-                .InvasionPaths
-                .Where(invasionpath => invasionpath.IsOccupiedBy(PlayerType.Opponent))
-                .OrderBy(region => region.NbrOfArmies)
-                .FirstOrDefault();
-            }
-
             if (invadingBorderTerritory != null)
             {
                 int enemyArmies = invadingBorderTerritory.NbrOfArmies;
@@ -614,15 +601,13 @@ namespace WarlightAI.GameBoard
                 //When we seem to be alone on this superregion, we'll want to make more than 1 move
                 foreach (var cTargetRegion in targetRegions)
                 {
-                    sourceRegion = cTargetRegion
-                    .Neighbours
-                    .Where(region => region.SuperRegion == superRegion)
-                    .Where(region => region.IsOccupiedBy(PlayerType.Me) && region.NbrOfArmies >= cTargetRegion.NbrOfArmies * 2 + 1)
-                    .Where(region => Transfers.Count(t => t.SourceRegion.ID == region.ID) == 0)
-                    .OrderByDescending(region => region.NbrOfArmies)
-                    .FirstOrDefault();
+                    sourceRegion = StrategyManager.GetSourceRegion(cTargetRegion, Transfers, SourceStrategy.DominateCurrentSuperRegion);
 
-                    transferDone = AddCurrentPairToTransferList(sourceRegion, cTargetRegion);
+                    if (sourceRegion.NbrOfArmies >= cTargetRegion.NbrOfArmies * 2 + 1)
+                    {
+                        transferDone = AddCurrentPairToTransferList(sourceRegion, cTargetRegion);
+                    }
+                    ;
                 }
             }
 
@@ -639,13 +624,7 @@ namespace WarlightAI.GameBoard
             Region targetRegion = null, sourceRegion = null;
             bool transferDone = false;
 
-            var hostileRegions = superRegion
-                .ChildRegions
-                .Where(region => region.IsOccupiedBy(PlayerType.Opponent))
-                .Where(region => region.Neighbours.Any(n => n.IsOccupiedBy(PlayerType.Me) && n.NbrOfArmies > 5 && (n.NbrOfArmies >= region.NbrOfArmies * 2 || n.NbrOfArmies > Configuration.Current.GetMaximumTreshold())))
-                .OrderBy(region => region.NbrOfArmies);
-
-
+            var hostileRegions = StrategyManager.GetTargetRegions(superRegion, Transfers, TargetStrategy.HostileRegions);
             if (hostileRegions.Any())
             {
                 foreach (var hostileRegion in hostileRegions)
