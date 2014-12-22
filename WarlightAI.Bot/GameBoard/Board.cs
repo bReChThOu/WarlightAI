@@ -324,6 +324,7 @@ namespace WarlightAI.GameBoard
 
             var primaryRegion = Regions
                 .Find(PlayerType.Me)
+                .Where(region => !region.AllNeighboursAreOccupiedBy(PlayerType.Me))
                 .Where(region => region.NbrOfArmies < 100)
                 .OrderByDescending(region => region.Neighbours.Count(neighbor => neighbor.IsOccupiedBy(PlayerType.Opponent)))
                 .ThenByDescending(region => region.Neighbours.Count(neighbor => neighbor.IsOccupiedBy(PlayerType.Neutral) && SuperRegions.Get(neighbor) == SuperRegions.Get(region)) > 0 ? 1 : 0)
@@ -514,17 +515,15 @@ namespace WarlightAI.GameBoard
             bool transferDone = false;
 
             var targetRegions = StrategyCalculator.GetTargetRegions(superRegion, SuperRegions, Transfers, TargetStrategy.ConquerAll);
-            targetRegion = targetRegions.FirstOrDefault();
 
             /* No neutral armies found in this super region, that should mean we own the continent.
              * Let's explore the world and go to a new super region
              * */
-            if (targetRegion == null)
+            if (targetRegions.None())
             {
                 targetRegions = StrategyCalculator.GetTargetRegions(superRegion, SuperRegions, Transfers, TargetStrategy.ConquerOtherSuperRegions);
-                targetRegion = targetRegions.FirstOrDefault();
 
-                if (targetRegion != null)
+                if (targetRegions.Any())
                 {
                     //We'll want to make more than 1 move
                     foreach (var cTargetRegion in targetRegions)

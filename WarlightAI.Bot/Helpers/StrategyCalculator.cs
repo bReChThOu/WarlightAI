@@ -54,8 +54,14 @@ namespace WarlightAI.Helpers
         {
             /*
              * Searches for regions in this super region that are occupied by me
+             * Or, where I have regions nearby
              * */
-            return superRegion.ChildRegions.None(region => region.IsOccupiedBy(PlayerType.Me));
+            return superRegion
+                     .ChildRegions
+                     .None(region => region.IsOccupiedBy(PlayerType.Me)) &&
+                   superRegion
+                     .ChildRegions
+                     .None(region => region.Neighbours.Any(n => n.IsOccupiedBy(PlayerType.Me)));
         }
 
         /// <summary>

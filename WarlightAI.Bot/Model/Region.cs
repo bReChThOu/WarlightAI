@@ -4,6 +4,7 @@
 // <author>Brecht Houben</author>
 // <date>10/03/2014</date>
 using System;
+using System.Linq;
 
 namespace WarlightAI.Model
 {
@@ -91,13 +92,23 @@ namespace WarlightAI.Model
         }
 
         /// <summary>
-        /// Determines whether this region [is occupied by] [the specified player type].
+        /// Determines whether this region is occupied by the specified player type.
         /// </summary>
         /// <param name="playerType">The player type.</param>
         /// <returns></returns>
         public bool IsOccupiedBy (PlayerType playerType)
         {
             return Player != null && Player.PlayerType == playerType;
+        }
+
+        /// <summary>
+        /// Determinal whether all neighbours are occupied by the specified player type.
+        /// </summary>
+        /// <param name="playerType">Type of the player.</param>
+        /// <returns></returns>
+        public bool AllNeighboursAreOccupiedBy(PlayerType playerType)
+        {
+            return Neighbours.All(neighbour => neighbour.IsOccupiedBy(playerType));
         }
 
         /// <summary>
