@@ -603,7 +603,7 @@ namespace WarlightAI.GameBoard
                 {
                     sourceRegion = StrategyManager.GetSourceRegion(cTargetRegion, Transfers, SourceStrategy.DominateCurrentSuperRegion);
 
-                    if (sourceRegion.NbrOfArmies >= cTargetRegion.NbrOfArmies * 2 + 1)
+                    if (sourceRegion != null && sourceRegion.NbrOfArmies >= cTargetRegion.NbrOfArmies * 2 + 1)
                     {
                         transferDone = AddCurrentPairToTransferList(sourceRegion, cTargetRegion);
                     }
@@ -637,8 +637,7 @@ namespace WarlightAI.GameBoard
                      * If this isn't the case, we'll send more armies to this region and defend our grounds.
                      * 
                      * */
-                    var possibleAttackingRegion = superRegion
-                        .ChildRegions
+                    var possibleAttackingRegion = Regions
                         .Find(PlayerType.Me)
                         .Where(region => region.Neighbours.Contains(hostileRegion))
                         .Where(
