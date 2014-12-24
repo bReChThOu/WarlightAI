@@ -316,6 +316,29 @@ namespace WarlightAI.GameBoard
 
                     UpdateRegions(placements);
                     return placements;
+                } 
+                else
+                {
+                    var regions = Regions.Find(PlayerType.Me);
+                    if (regions.Count() <= startingArmies)
+                    {
+                        var armiesPerRegion = startingArmies / regions.Count();
+
+                        foreach (var region in regions)
+                        {
+                            if (region == regions.Last())
+                            {
+                                armiesPerRegion = startingArmies - (armiesPerRegion * regions.Count());
+                            }
+
+                            placements.Add(new ArmyPlacement
+                            {
+                                Armies = armiesPerRegion,
+                                Region = region
+                            });
+                        }
+                    }
+
                 }
 
                 Configuration.Current.SetStartRoundNumber(2);
