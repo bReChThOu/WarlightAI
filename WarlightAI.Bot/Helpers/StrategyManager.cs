@@ -6,6 +6,7 @@
 
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.Remoting.Messaging;
 using WarlightAI.Model;
 
 namespace WarlightAI.Helpers
@@ -264,6 +265,29 @@ namespace WarlightAI.Helpers
                 .ThenOrderRegions(OrderStrategy.SmallSuperRegionsFirst)
                 .ThenOrderRegions(OrderStrategy.MostNumberOfArmies)
                 .FirstOrDefault();
+        }
+
+        /// <summary>
+        /// Finds the escape route for stuck army.
+        /// </summary>
+        /// <param name="stuckArmy">The stuck army.</param>
+        /// <returns></returns>
+        public static Region FindEscapeRouteForStuckArmy(Region stuckArmy)
+        {
+            if (stuckArmy.Neighbours.Any(r => !r.IsOccupiedBy(PlayerType.Me)))
+            {
+                return stuckArmy;
+            }
+
+            foreach (var neighbour in stuckArmy.Neighbours)
+            {
+                if (FindEscapeRouteForStuckArmy(neighbour) != null)
+                {
+                    return neighbour;
+                }
+            }
+
+            return null;
         }
 
         public static Region GetSecundaryRegion(Regions regions, Region primaryRegion)

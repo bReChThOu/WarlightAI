@@ -195,6 +195,16 @@ namespace WarlightAI.GameBoard
         }
 
         /// <summary>
+        /// Gets the region.
+        /// </summary>
+        /// <param name="id">The identifier.</param>
+        /// <returns></returns>
+        public Region GetRegion(int id)
+        {
+            return Regions.Get(id);
+        }
+
+        /// <summary>
         /// Picks the favorite starting region.
         /// </summary>
         /// <returns></returns>
