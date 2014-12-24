@@ -478,47 +478,8 @@ namespace WarlightAI.GameBoard
             // Neutral regions found in this super region
             else
             {
-                //When we seem to be alone on this superregion, we'll want to make more than 1 move
-                for (int i = 0; i < targetRegions.Count(); i++)
-                {
-                    var cTargetRegion = targetRegions.Skip(i).First();
-
-                    sourceRegion = StrategyManager.GetSourceRegion(cTargetRegion, Transfers, SourceStrategy.DominateOtherSuperRegions);
-                    if (sourceRegion != null)
-                    {
-                        //We can conquer multiple neutral regions with one army.
-                        if (sourceRegion.NbrOfArmies > 10 && cTargetRegion.NbrOfArmies <= 4)
-                        {
-                            i--;
-                            for (int n = sourceRegion.NbrOfArmies; n > 5 && i < targetRegions.Count() - 1; )
-                            {
-                                cTargetRegion = targetRegions.ToArray()[++i];
-                                int nbrOfArmies = 5;
-                                if (n < 10)
-                                {
-                                    nbrOfArmies = n - 1;
-                                }
-                                transferDone = AddCurrentPairToTransferList(sourceRegion, cTargetRegion, nbrOfArmies);
-                                n = n - nbrOfArmies;
-                            }
-                        }
-                        else
-                        {
-                            if (sourceRegion.NbrOfArmies >= cTargetRegion.NbrOfArmies * 2 + 1)
-                            {
-                                var nbrOfArmies = cTargetRegion.NbrOfArmies * 2 * 2;
-
-                                //If we're enclosed by ourself, attack with everything
-                                if (sourceRegion.Neighbours.Count(n => n.IsOccupiedBy(PlayerType.Me)) == sourceRegion.Neighbours.Count - 1)
-                                {
-                                    nbrOfArmies = sourceRegion.NbrOfArmies - 1;
-                                }
-
-                                transferDone = AddCurrentPairToTransferList(sourceRegion, cTargetRegion, nbrOfArmies);
-                            }
-                        }
-                    }
-                }
+                StrategyManager.ConquerNeutralRegions(targetRegions, Transfers, SourceStrategy.DominateOtherSuperRegions);
+                
             }
             
             return transferDone;
@@ -589,26 +550,8 @@ namespace WarlightAI.GameBoard
 
                 transferDone = AddCurrentPairToTransferList(sourceRegion, targetRegion);
 
-                var targetRegions = superRegion
-                    .ChildRegions
-                    .Where(region => region.IsOccupiedBy(PlayerType.Neutral))
-                    .OrderBy(region => region.Neighbours.Count(neighbor => neighbor.SuperRegion != region.SuperRegion) > 0 ? 1 : 0)
-                    .ThenByDescending(region => region.Neighbours.Count(neighbor => neighbor.IsOccupiedBy(PlayerType.Neutral) && neighbor.SuperRegion == region.SuperRegion) > 0 ? 1 : 0)
-                    .ThenByDescending(region =>
-                        region.Neighbours.Where(neighbour => neighbour.IsOccupiedBy(PlayerType.Me)).Select(reg => reg.NbrOfArmies).Sum()
-                    );
-
-                //When we seem to be alone on this superregion, we'll want to make more than 1 move
-                foreach (var cTargetRegion in targetRegions)
-                {
-                    sourceRegion = StrategyManager.GetSourceRegion(cTargetRegion, Transfers, SourceStrategy.DominateCurrentSuperRegion);
-
-                    if (sourceRegion != null && sourceRegion.NbrOfArmies >= cTargetRegion.NbrOfArmies * 2 + 1)
-                    {
-                        transferDone = AddCurrentPairToTransferList(sourceRegion, cTargetRegion);
-                    }
-                    ;
-                }
+                var targetRegions = StrategyManager.GetTargetRegions(superRegion, Transfers, TargetStrategy.ConquerCurrentSuperRegion);
+                StrategyManager.ConquerNeutralRegions(targetRegions, Transfers, SourceStrategy.DominateCurrentSuperRegion);
             }
 
             return transferDone;
@@ -690,15 +633,7 @@ namespace WarlightAI.GameBoard
                         {
                             //We can't defend a region, probably because we don't have armies nearby, so let's conquer some regions instead
                             var targetRegions = StrategyManager.GetTargetRegions(superRegion, Transfers, TargetStrategy.ConquerCurrentSuperRegion);
-
-                            foreach (var cTargetRegion in targetRegions)
-                            {
-                                sourceRegion = StrategyManager.GetSourceRegion(cTargetRegion, Transfers, SourceStrategy.DominateCurrentSuperRegion);
-                                if (sourceRegion != null)
-                                {
-                                    transferDone = AddCurrentPairToTransferList(sourceRegion, cTargetRegion);
-                                }
-                            }
+                            StrategyManager.ConquerNeutralRegions(targetRegions, Transfers, SourceStrategy.DominateCurrentSuperRegion);
                         }
                     }
                 }
@@ -712,39 +647,7 @@ namespace WarlightAI.GameBoard
             else
             {
                 var targetRegions = StrategyManager.GetTargetRegions(superRegion, Transfers, TargetStrategy.ConquerCurrentSuperRegion);
-
-                for (int i = 0; i < targetRegions.Count(); i++)
-                {
-                    var cTargetRegion = targetRegions.ToArray()[i];
-                    sourceRegion = StrategyManager.GetSourceRegion(cTargetRegion, Transfers, SourceStrategy.DominateCurrentSuperRegion);
-
-                    if (sourceRegion != null)
-                    {
-                        //We can conquer multiple neutral regions with one army.
-                        if (sourceRegion.NbrOfArmies > 10)
-                        {
-                            i--;
-                            for (int n = sourceRegion.NbrOfArmies; n > 5 && i < targetRegions.Count() - 1; )
-                            {
-                                cTargetRegion = targetRegions.ToArray()[++i];
-                                int nbrOfArmies = 5;
-                                if (n < 10)
-                                {
-                                    nbrOfArmies = n - 1;
-                                }
-                                transferDone = AddCurrentPairToTransferList(sourceRegion, cTargetRegion, nbrOfArmies);
-                                n = n - nbrOfArmies;
-                            }
-                        }
-                        else
-                        {
-                            if (sourceRegion.NbrOfArmies >= cTargetRegion.NbrOfArmies * 2)
-                            {
-                                transferDone = AddCurrentPairToTransferList(sourceRegion, cTargetRegion);
-                            }
-                        }
-                    }
-                }
+                StrategyManager.ConquerNeutralRegions(targetRegions, Transfers, SourceStrategy.DominateCurrentSuperRegion);
             }
 
             return transferDone;
@@ -798,7 +701,7 @@ namespace WarlightAI.GameBoard
                 return false;
             }
 
-            if (sourceRegion.NbrOfArmies > 5 || (sourceRegion.Player.PlayerType == PlayerType.Me && targetRegion.Player.PlayerType == PlayerType.Me && sourceRegion.NbrOfArmies > 1))
+            if (sourceRegion.NbrOfArmies > 3 || (sourceRegion.IsOccupiedBy(PlayerType.Me) && targetRegion.IsOccupiedBy(PlayerType.Me) && sourceRegion.NbrOfArmies > 1))
             {
                 var transfer = new ArmyTransfer
                 {

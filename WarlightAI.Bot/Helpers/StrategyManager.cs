@@ -201,6 +201,52 @@ namespace WarlightAI.Helpers
             return targetRegions;
         }
 
+        public static IEnumerable<ArmyTransfer> ConquerNeutralRegions(IEnumerable<Region> targetRegions, IList<ArmyTransfer> transfers, SourceStrategy sourceStrategy)
+        {
+            for (int i = 0; i < targetRegions.Count(); i++)
+            {
+                var cTargetRegion = targetRegions.Skip(i).First();
+
+                var sourceRegion = StrategyManager.GetSourceRegion(cTargetRegion, transfers, sourceStrategy);
+                if (sourceRegion != null)
+                {
+                    //We can conquer multiple neutral regions with one army.
+                    if (sourceRegion.NbrOfArmies >= 7 && cTargetRegion.NbrOfArmies == 2)
+                    {
+                        i--;
+                        for (int n = sourceRegion.NbrOfArmies; n >= 4 && i < targetRegions.Count() - 1; )
+                        {
+                            cTargetRegion = targetRegions.ToArray()[++i];
+                            if (cTargetRegion.NbrOfArmies > 2)
+                            {
+                                continue;
+                            }
+
+                            transfers.Add(new ArmyTransfer{ Armies = 3, SourceRegion = sourceRegion, TargetRegion = cTargetRegion });
+                            n = n - 3;
+                        }
+                    }
+                    else
+                    {
+                        if (sourceRegion.NbrOfArmies >= cTargetRegion.NbrOfArmies * 2 + 1)
+                        {
+                            var nbrOfArmies = cTargetRegion.NbrOfArmies * 2 * 2;
+
+                            //If we're enclosed by ourself, attack with everything
+                            if (sourceRegion.Neighbours.Count(n => n.IsOccupiedBy(PlayerType.Me)) == sourceRegion.Neighbours.Count - 1)
+                            {
+                                nbrOfArmies = sourceRegion.NbrOfArmies - 1;
+                            }
+
+                            transfers.Add(new ArmyTransfer { Armies = nbrOfArmies, SourceRegion = sourceRegion, TargetRegion = cTargetRegion });
+                        }
+                    }
+                }
+            }
+
+            return transfers;
+        }
+
         /// <summary>
         /// Gets the primary region.
         /// </summary>
